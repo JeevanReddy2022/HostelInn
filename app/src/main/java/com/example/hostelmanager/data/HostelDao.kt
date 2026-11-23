@@ -30,4 +30,8 @@ interface HostelDao {
     // 5. Get all hostels, including archived ones (for the Archive screen)
     @Query("SELECT * FROM hostels ORDER BY name ASC")
     fun getAllHostels(): Flow<List<Hostel>>
+
+    // 6. Get a specific hostel by ID
+    @Query("SELECT * FROM hostels WHERE id = :id")
+    fun getHostelById(id: String): Flow<Hostel?>
 }

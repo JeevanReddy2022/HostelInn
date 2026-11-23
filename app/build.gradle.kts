@@ -37,6 +37,11 @@ android {
     }
 }
 
+ksp {
+    // Writes the Room schema JSON so future migrations can be tested.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -46,7 +51,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -58,15 +66,13 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-    // ViewModel for Compose
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
 
-    // Material Icons (for the + button)
-    implementation("androidx.compose.material:material-icons-extended")
+    // Material Icons
+    implementation(libs.androidx.compose.material.icons.extended)
 
-    //To move between screens in Android, we use a library called Navigation.
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
 
-    //Coil is a small library that displays images (thumbnails, previews) easily.
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    // Coil Image Loading
+    implementation(libs.coil.compose)
 }

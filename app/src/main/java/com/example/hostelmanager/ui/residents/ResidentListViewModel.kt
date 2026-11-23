@@ -1,10 +1,9 @@
 package com.example.hostelmanager.ui.residents
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.ResidentWithRoom
+import com.example.hostelmanager.data.repository.ResidentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,10 +11,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 
-/**
- * Search across name, room number, Govt ID, phone and emergency contact.
- * Order stays alphabetical by name (comes from the database query).
- */
 internal fun searchResidents(
     residents: List<ResidentWithRoom>,
     rawQuery: String
@@ -32,23 +27,21 @@ internal fun searchResidents(
     }
 }
 
-class ResidentListViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val dao = db.personDao()
+class ResidentListViewModel(
+    private val residentRepository: ResidentRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
 
     val residents: StateFlow<List<ResidentWithRoom>> = _hostelId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(emptyList())
-        else dao.getActiveResidentsByHostel(id)
+        else residentRepository.getActiveResidentsByHostel(id)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    // Lives in the ViewModel so the search survives tab switches and rotation.
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query
 

@@ -1,31 +1,24 @@
 package com.example.hostelmanager.ui.payments
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Payment
-import com.example.hostelmanager.data.Person
 import com.example.hostelmanager.data.ResidentWithRoom
-import com.example.hostelmanager.data.ResidentWithStayInfo
-import com.example.hostelmanager.data.Stay
+import com.example.hostelmanager.data.repository.PaymentRepository
+import com.example.hostelmanager.data.repository.ResidentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
-class RecordPaymentViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val personDao = db.personDao()
-    private val stayDao = db.stayDao()
-    private val paymentDao = db.paymentDao()
+class RecordPaymentViewModel(
+    private val residentRepository: ResidentRepository,
+    private val paymentRepository: PaymentRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
 
@@ -33,58 +26,12 @@ class RecordPaymentViewModel(application: Application) : AndroidViewModel(applic
         if (hostelId.isEmpty()) {
             flowOf(emptyList())
         } else {
-            personDao.getAllResidentsWithLatestStay(hostelId).flatMapLatest { allResidents ->
-                flow {
-                    val result = mutableListOf<ResidentWithRoom>()
-                    val today = LocalDate.now()
-
-                    for (resident in allResidents) {
-                        val anchorDay = resident.billingAnchorDay.coerceIn(1, 31)
-
-                        val cycleStart: LocalDate = if (resident.isActive) {
-                            calculateCycleStart(today, anchorDay)
-                        } else {
-                            val checkoutDate = resident.checkoutDate?.let {
-                                LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
-                            } ?: continue
-                            calculateCycleStart(checkoutDate, anchorDay)
-                        }
-                        val cycleEnd = cycleStart.plusMonths(1).minusDays(1)
-
-                        val cycleStartStr = cycleStart.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                        val cycleEndStr = cycleEnd.format(DateTimeFormatter.ISO_LOCAL_DATE)
-
-                        val payments = paymentDao.getPaymentsInCycle(
-                            resident.stayId, cycleStartStr, cycleEndStr
-                        )
-
-                        if (payments.isEmpty()) {
-                            val person = Person(
-                                id = resident.personId,
-                                name = resident.name,
-                                phone = resident.phone,
-                                profilePhotoPath = resident.profilePhotoPath,
-                                govtIdNumber = "",
-                                emergencyContact = "",
-                                dateOfBirth = "",
-                                address = "",
-                                gender = "",
-                                guardianName = "",
-                                govtIdPhotoPath = "",
-                                govtIdBackPath = ""
-                            )
-                            result.add(
-                                ResidentWithRoom(
-                                    person = person,
-                                    roomNumber = resident.roomNumber,
-                                    monthlyRent = resident.monthlyRent
-                                )
-                            )
-                        }
-                    }
-
-                    emit(result.sortedBy { it.person.name })
-                }
+            residentRepository.getAllResidentsWithLatestStay(hostelId).map { allResidents ->
+                paymentRepository.getUnpaidResidentsForHostel(
+                    hostelId = hostelId,
+                    allResidents = allResidents,
+                    today = LocalDate.now()
+                )
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -93,7 +40,6 @@ class RecordPaymentViewModel(application: Application) : AndroidViewModel(applic
         _hostelId.value = id
     }
 
-    // UPDATED: accepts both paymentDate and recordedDate
     suspend fun recordPayment(
         personId: String,
         amountPaise: Long,
@@ -104,10 +50,9 @@ class RecordPaymentViewModel(application: Application) : AndroidViewModel(applic
     ): Boolean {
         if (personId.isEmpty() || amountPaise <= 0 || paymentDate.isEmpty() || recordedDate.isEmpty()) return false
 
-        val stay = stayDao.getStaysByPerson(personId).stateIn(viewModelScope).value.firstOrNull()
-        if (stay == null) return false
+        val stay = residentRepository.getActiveStayForPerson(personId) ?: return false
 
-        paymentDao.insertPayment(
+        paymentRepository.insertPayment(
             Payment(
                 stayId = stay.id,
                 personId = personId,
@@ -120,18 +65,5 @@ class RecordPaymentViewModel(application: Application) : AndroidViewModel(applic
             )
         )
         return true
-    }
-
-    private fun calculateCycleStart(referenceDate: LocalDate, anchorDay: Int): LocalDate {
-        var cycleStart = referenceDate.withDayOfMonth(
-            anchorDay.coerceAtMost(referenceDate.lengthOfMonth())
-        )
-        if (cycleStart.isAfter(referenceDate)) {
-            val prevMonth = referenceDate.minusMonths(1)
-            cycleStart = prevMonth.withDayOfMonth(
-                anchorDay.coerceAtMost(prevMonth.lengthOfMonth())
-            )
-        }
-        return cycleStart
     }
 }

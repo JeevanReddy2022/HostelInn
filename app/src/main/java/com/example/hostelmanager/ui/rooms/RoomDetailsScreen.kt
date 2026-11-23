@@ -49,11 +49,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,17 +91,17 @@ fun RoomDetailsScreen(
     onBackClick: () -> Unit,
     onResidentClick: (String) -> Unit,
     onAddResidentClick: () -> Unit, // Callback to navigate to Add Resident
-    viewModel: RoomDetailsViewModel = viewModel()
+    viewModel: RoomDetailsViewModel = appViewModel()
 ) {
     LaunchedEffect(roomId) {
         viewModel.setRoomId(roomId)
     }
 
-    val room by viewModel.room.collectAsState()
-    val residents by viewModel.residents.collectAsState()
-    val totalStays by viewModel.totalStays.collectAsState()
-    val rentPrompt by viewModel.rentPrompt.collectAsState()
-    val roomRemoved by viewModel.roomRemoved.collectAsState()
+    val room by viewModel.room.collectAsStateWithLifecycle()
+    val residents by viewModel.residents.collectAsStateWithLifecycle()
+    val totalStays by viewModel.totalStays.collectAsStateWithLifecycle()
+    val rentPrompt by viewModel.rentPrompt.collectAsStateWithLifecycle()
+    val roomRemoved by viewModel.roomRemoved.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showOccupiedDialog by remember { mutableStateOf(false) }

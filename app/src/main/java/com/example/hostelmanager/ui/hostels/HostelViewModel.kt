@@ -1,22 +1,19 @@
 package com.example.hostelmanager.ui.hostels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Hostel
+import com.example.hostelmanager.data.repository.HostelRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HostelViewModel(application: Application) : AndroidViewModel(application) {
+class HostelViewModel(
+    private val hostelRepository: HostelRepository
+) : ViewModel() {
 
-    private val db = AppDatabase.getDatabase(application)
-    private val dao = db.hostelDao()
-
-    // Live list of active hostels, automatically updates when DB changes
-    val hostels: StateFlow<List<Hostel>> = dao.getAllActiveHostels()
+    val hostels: StateFlow<List<Hostel>> = hostelRepository.getAllHostels()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -25,7 +22,7 @@ class HostelViewModel(application: Application) : AndroidViewModel(application) 
 
     fun addHostel(name: String, address: String, phone: String) {
         viewModelScope.launch {
-            dao.insertHostel(
+            hostelRepository.insertHostel(
                 Hostel(
                     name = name,
                     address = address,

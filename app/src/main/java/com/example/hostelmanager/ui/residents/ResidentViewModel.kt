@@ -1,26 +1,24 @@
 package com.example.hostelmanager.ui.residents
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Person
 import com.example.hostelmanager.data.RoomWithOccupancy
 import com.example.hostelmanager.data.Stay
+import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.data.repository.RoomRepository
+import com.example.hostelmanager.domain.BillingCycle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
-class ResidentViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val personDao = db.personDao()
-    private val stayDao = db.stayDao()
-    private val roomDao = db.roomDao()
+class ResidentViewModel(
+    private val residentRepository: ResidentRepository,
+    private val roomRepository: RoomRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
 
@@ -35,7 +33,7 @@ class ResidentViewModel(application: Application) : AndroidViewModel(application
 
     val roomsForHostel: StateFlow<List<RoomWithOccupancy>> = _hostelId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(emptyList())
-        else roomDao.getRoomsWithOccupancy(id)
+        else roomRepository.getRoomsWithOccupancy(id)
     }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000), initialValue = emptyList())
 
     fun setHostelId(id: String) {
@@ -57,15 +55,15 @@ class ResidentViewModel(application: Application) : AndroidViewModel(application
 
         var hasDuplicates = false
 
-        if (personDao.isPhoneDuplicate(phone)) {
+        if (residentRepository.isPhoneDuplicate(phone)) {
             _phoneError.value = "This phone number is already in use!"
             hasDuplicates = true
         }
-        if (personDao.isGovtIdDuplicate(govtIdNumber)) {
+        if (residentRepository.isGovtIdDuplicate(govtIdNumber)) {
             _govtIdError.value = "This Govt ID is already in use!"
             hasDuplicates = true
         }
-        if (personDao.isEmergencyDuplicate(emergencyContact)) {
+        if (residentRepository.isEmergencyDuplicate(emergencyContact)) {
             _emergencyError.value = "This emergency contact is already in use!"
             hasDuplicates = true
         }
@@ -80,11 +78,6 @@ class ResidentViewModel(application: Application) : AndroidViewModel(application
             govtIdBackPath = govtBackPath,
             profilePhotoPath = profilePhotoPath
         )
-        personDao.insertPerson(newPerson)
-
-        // NEW: extract day of month from joinDate ("YYYY-MM-DD" → day)
-        val anchorDay = joinDate.substring(8, 10).toIntOrNull() ?: 1
-
         val newStay = Stay(
             personId = newPerson.id,
             hostelId = hostelId,
@@ -92,10 +85,11 @@ class ResidentViewModel(application: Application) : AndroidViewModel(application
             joinDate = joinDate,
             monthlyRent = rentPaise,
             depositCollected = depositPaise,
-            billingAnchorDay = anchorDay,
+            billingAnchorDay = BillingCycle.anchorDayOf(joinDate),
             isActive = true
         )
-        stayDao.insertStay(newStay)
+
+        residentRepository.addResident(newPerson, newStay)
 
         return true
     }

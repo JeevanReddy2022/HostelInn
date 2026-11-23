@@ -12,8 +12,14 @@ interface ExpenseDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExpense(expense: Expense)
 
+    @androidx.room.Update
+    suspend fun updateExpense(expense: Expense)
+
     @Query("DELETE FROM expenses WHERE id = :id")
     suspend fun deleteExpense(id: String)
+
+    @Query("SELECT * FROM expenses WHERE id = :id")
+    suspend fun getExpenseById(id: String): Expense?
 
     @Query("SELECT * FROM expenses WHERE hostelId = :hostelId ORDER BY expenseDate DESC")
     fun getAllExpensesForHostel(hostelId: String): Flow<List<Expense>>
@@ -39,6 +45,13 @@ interface ExpenseDao {
     AND expenseDate LIKE :monthPattern
 """)
     fun getTotalExpensesForMonth(hostelId: String, monthPattern: String): Flow<Long>
+
+    @Query("""
+    SELECT COUNT(*) FROM expenses 
+    WHERE hostelId = :hostelId 
+    AND expenseDate LIKE :monthPattern
+""")
+    fun getExpensesCountForMonth(hostelId: String, monthPattern: String): Flow<Int>
 
     @Query("""
     SELECT COALESCE(SUM(amountPaise), 0) FROM expenses 

@@ -1,22 +1,16 @@
 package com.example.hostelmanager.ui.rooms
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.RoomEntity
 import com.example.hostelmanager.data.RoomWithOccupancy
+import com.example.hostelmanager.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-
-/* ------------------------------------------------------------------ */
-/*  Filter / sort model                                                */
-/* ------------------------------------------------------------------ */
 
 enum class RoomAvailability(val label: String, val caption: String) {
     ALL("All rooms", "Show every room in this hostel"),
@@ -117,27 +111,21 @@ internal fun summarizeRooms(rooms: List<RoomWithOccupancy>): RoomSummary = RoomS
     fullRooms = rooms.count { it.occupiedBeds >= it.room.bedCount }
 )
 
-/* ------------------------------------------------------------------ */
-/*  ViewModel                                                          */
-/* ------------------------------------------------------------------ */
-
-class RoomViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val dao = db.roomDao()
+class RoomViewModel(
+    private val roomRepository: RoomRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
 
     val roomsWithOccupancy: StateFlow<List<RoomWithOccupancy>> = _hostelId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(emptyList())
-        else dao.getRoomsWithOccupancy(id)
+        else roomRepository.getRoomsWithOccupancy(id)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    // Lives in the ViewModel so filters survive tab switches and rotation.
     private val _filters = MutableStateFlow(RoomFilters())
     val filters: StateFlow<RoomFilters> = _filters
 
@@ -171,7 +159,6 @@ class RoomViewModel(application: Application) : AndroidViewModel(application) {
         _filters.value = _filters.value.copy(sort = value)
     }
 
-    /** Resets search + filters, keeps the chosen sort order. */
     fun clearFilters() {
         _filters.value = _filters.value.copy(
             query = "",
@@ -193,7 +180,7 @@ class RoomViewModel(application: Application) : AndroidViewModel(application) {
     ): Boolean {
         if (_hostelId.value.isEmpty()) return false
 
-        val count = dao.countRoomsWithNumber(_hostelId.value, roomNumber)
+        val count = roomRepository.countRoomsWithNumber(_hostelId.value, roomNumber)
         if (count > 0) {
             _roomExistsError.value =
                 "Room $roomNumber already exists in this hostel. You can restore it from the Archived Rooms screen."
@@ -201,7 +188,7 @@ class RoomViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         _roomExistsError.value = null
-        dao.insertRoom(
+        roomRepository.insertRoom(
             RoomEntity(
                 hostelId = _hostelId.value,
                 roomNumber = roomNumber,

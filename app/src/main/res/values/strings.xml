@@ -1,3 +1,69 @@
 <resources>
     <string name="app_name">HostelManager</string>
+
+    <!-- Navigation & Titles -->
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_manage_hostel">Manage Hostel</string>
+    <string name="title_rooms">Rooms</string>
+    <string name="title_residents">Residents</string>
+    <string name="title_payments">Payments</string>
+    <string name="title_expenses">Expenses</string>
+    <string name="title_reports">Reports</string>
+    <string name="title_add_resident">Add Resident</string>
+    <string name="title_edit_resident">Edit Resident</string>
+    <string name="title_checkout">Check Out Resident</string>
+    <string name="title_transfer_room">Transfer Room</string>
+    <string name="title_re_admit">Re-admit Resident</string>
+    <string name="title_record_payment">Record Payment</string>
+    <string name="title_payment_history">Payment History</string>
+    <string name="title_add_expense">Add Expense</string>
+    <string name="title_room_details">Room Details</string>
+    <string name="title_archived_rooms">Archived Rooms</string>
+    <string name="title_past_residents">Past Residents</string>
+
+    <!-- Buttons & Actions -->
+    <string name="btn_back">Back</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_confirm">Confirm</string>
+    <string name="btn_done">Done</string>
+    <string name="btn_add">Add</string>
+    <string name="btn_record">Record</string>
+    <string name="btn_checkout">Check Out</string>
+    <string name="btn_transfer">Transfer</string>
+    <string name="btn_re_admit">Re-admit</string>
+    <string name="btn_archive">Archive</string>
+    <string name="btn_restore">Restore</string>
+    <string name="btn_search">Search</string>
+    <string name="btn_clear">Clear</string>
+
+    <!-- Form Labels -->
+    <string name="lbl_name">Full Name</string>
+    <string name="lbl_phone">Phone Number</string>
+    <string name="lbl_emergency_contact">Emergency Contact</string>
+    <string name="lbl_govt_id">Govt ID Number</string>
+    <string name="lbl_dob">Date of Birth</string>
+    <string name="lbl_gender">Gender</string>
+    <string name="lbl_address">Address</string>
+    <string name="lbl_guardian">Guardian Name</string>
+    <string name="lbl_room">Room Number</string>
+    <string name="lbl_rent">Monthly Rent</string>
+    <string name="lbl_deposit">Deposit Held</string>
+    <string name="lbl_join_date">Join Date</string>
+    <string name="lbl_checkout_date">Check-out Date</string>
+    <string name="lbl_transfer_date">Transfer Date</string>
+    <string name="lbl_amount">Amount (₹)</string>
+    <string name="lbl_payment_mode">Payment Mode</string>
+    <string name="lbl_category">Category</string>
+    <string name="lbl_note">Note / Remarks</string>
+
+    <!-- Messages & Status -->
+    <string name="msg_loading">Loading…</string>
+    <string name="msg_no_data">No records found</string>
+    <string name="msg_active">Active</string>
+    <string name="msg_checked_out">Checked Out</string>
+    <string name="msg_occupied">Occupied</string>
+    <string name="msg_vacant">Vacant</string>
+    <string name="msg_full">Full</string>
 </resources>

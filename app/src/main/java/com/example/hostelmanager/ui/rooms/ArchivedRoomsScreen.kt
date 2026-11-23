@@ -33,7 +33,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +51,8 @@ import com.example.hostelmanager.ui.theme.AppGreen
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
 import com.example.hostelmanager.ui.theme.AppSoftBlue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.theme.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,11 +60,11 @@ import com.example.hostelmanager.ui.theme.AppText
 fun ArchivedRoomsScreen(
     hostelId: String,
     onBackClick: () -> Unit,
-    viewModel: ArchivedRoomsViewModel = viewModel()
+    viewModel: ArchivedRoomsViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
 
-    val rooms by viewModel.archivedRooms.collectAsState()
+    val rooms by viewModel.archivedRooms.collectAsStateWithLifecycle()
     var roomToRestore by remember { mutableStateOf<RoomEntity?>(null) }
 
     Scaffold(

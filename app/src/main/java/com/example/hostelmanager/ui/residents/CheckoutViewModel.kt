@@ -1,12 +1,12 @@
 package com.example.hostelmanager.ui.residents
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Person
 import com.example.hostelmanager.data.RoomEntity
 import com.example.hostelmanager.data.Stay
+import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,28 +14,25 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 
-class CheckoutViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val personDao = db.personDao()
-    private val stayDao = db.stayDao()
-    private val roomDao = db.roomDao()
+class CheckoutViewModel(
+    private val residentRepository: ResidentRepository,
+    private val roomRepository: RoomRepository
+) : ViewModel() {
 
     private val _personId = MutableStateFlow("")
 
     val person: StateFlow<Person?> = _personId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(null) else personDao.getPersonByIdFlow(id)
+        if (id.isEmpty()) flowOf(null) else residentRepository.getPersonByIdFlow(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val activeStay: StateFlow<Stay?> = _personId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(null) else stayDao.getActiveStayByPerson(id)
+        if (id.isEmpty()) flowOf(null) else residentRepository.getActiveStayByPerson(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // person -> active stay -> that room
     val currentRoom: StateFlow<RoomEntity?> = _personId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(null)
-        else stayDao.getActiveStayByPerson(id).flatMapLatest { stay ->
-            if (stay == null) flowOf(null) else roomDao.getRoomById(stay.roomId)
+        else residentRepository.getActiveStayByPerson(id).flatMapLatest { stay ->
+            if (stay == null) flowOf(null) else roomRepository.getRoomById(stay.roomId)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -52,7 +49,7 @@ class CheckoutViewModel(application: Application) : AndroidViewModel(application
         refundMode: String?,
         refundDate: String?
     ): Boolean {
-        val stay = activeStay.value ?: return false
+        val stay = activeStay.value ?: residentRepository.getActiveStayForPerson(_personId.value) ?: return false
 
         _checkoutError.value = null
 
@@ -61,7 +58,6 @@ class CheckoutViewModel(application: Application) : AndroidViewModel(application
             return false
         }
 
-        // Dates are stored as YYYY-MM-DD, so text comparison is correct
         if (checkoutDate < stay.joinDate) {
             _checkoutError.value = "Check-out date cannot be before the join date (${stay.joinDate})."
             return false
@@ -82,16 +78,12 @@ class CheckoutViewModel(application: Application) : AndroidViewModel(application
             return false
         }
 
-        // Close the stay. Nothing is deleted — the record and its history stay intact.
-        stayDao.updateStay(
-            stay.copy(
-                isActive = false,
-                checkoutDate = checkoutDate,
-                depositRefunded = refundPaise,
-                depositRefundMode = if (refundPaise > 0) refundMode else null,
-                depositRefundDate = if (refundPaise > 0) refundDate else null,
-                updatedAt = System.currentTimeMillis()
-            )
+        residentRepository.checkoutResident(
+            stay = stay,
+            checkoutDate = checkoutDate,
+            refundPaise = refundPaise,
+            refundMode = refundMode,
+            refundDate = refundDate
         )
 
         return true

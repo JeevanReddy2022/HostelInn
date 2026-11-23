@@ -37,7 +37,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,13 +78,13 @@ fun PaymentsListScreen(
     onRecordPaymentClick: (String) -> Unit,
     onPaymentHistoryClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: PaymentsViewModel = viewModel()
+    viewModel: PaymentsViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) {
         viewModel.setHostelId(hostelId)
     }
 
-    val residents by viewModel.residents.collectAsState()
+    val residents by viewModel.residents.collectAsStateWithLifecycle()
     var sortOption by remember { mutableStateOf(SortOption.NAME) }
 
     val sortedResidents = when (sortOption) {

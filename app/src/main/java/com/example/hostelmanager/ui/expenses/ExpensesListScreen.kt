@@ -55,11 +55,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,17 +86,16 @@ import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftGreen
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.formatDisplayDate
+import com.example.hostelmanager.util.formatRupees
 import java.io.File
-import java.text.NumberFormat
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 
 private enum class ExpensePicker { MONTH, CATEGORY, SORT }
 
 /* Category identity — each expense type carries its own hue and glyph. */
 private data class CategoryStyle(val accent: Color, val soft: Color, val icon: ImageVector)
 
+@Composable
 private fun categoryStyle(category: String): CategoryStyle = when (category) {
     "Electricity" -> CategoryStyle(Color(0xFFF59E0B), Color(0xFFFEF3C7), Icons.Default.Bolt)
     "Water" -> CategoryStyle(Color(0xFF0EA5E9), Color(0xFFE0F2FE), Icons.Default.WaterDrop)
@@ -111,12 +111,12 @@ fun ExpensesListScreen(
     hostelId: String,
     onAddExpenseClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ExpensesViewModel = viewModel()
+    viewModel: ExpensesViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
 
-    val allExpenses by viewModel.expenses.collectAsState()
-    val filters by viewModel.filters.collectAsState()
+    val allExpenses by viewModel.expenses.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
 
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
@@ -920,21 +920,3 @@ private fun NoMatchingExpenses(query: String, onClearAll: () -> Unit) {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-private fun formatRupees(amountPaise: Long): String {
-    val rupees = amountPaise / 100
-    val formatted = NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
-        maximumFractionDigits = 0
-        minimumFractionDigits = 0
-    }.format(rupees)
-    return "₹$formatted"
-}
-
-private fun formatDisplayDate(iso: String): String {
-    val date = runCatching { LocalDate.parse(iso) }.getOrNull() ?: return iso
-    val month = date.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-    return "${date.dayOfMonth} $month ${date.year}"
-}

@@ -16,11 +16,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,29 +34,49 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.text.NumberFormat
+import com.example.hostelmanager.util.formatRupees
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlin.math.abs
+
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.ReadOnlyComposable
 
 // Premium palette
-private val PremiumBackground = Color(0xFFF6F8FB)
 private val PremiumNavy = Color(0xFF0B1F33)
 private val PremiumNavyLight = Color(0xFF123B5D)
 private val PremiumTeal = Color(0xFF0F766E)
-private val PremiumCard = Color(0xFFFFFFFF)
-private val PremiumText = Color(0xFF0F172A)
-private val PremiumMuted = Color(0xFF64748B)
-private val PremiumBorder = Color(0xFFE2E8F0)
 private val PremiumSky = Color(0xFF38BDF8)
 private val PremiumGreen = Color(0xFF10B981)
 private val PremiumOrange = Color(0xFFF97316)
 private val PremiumRed = Color(0xFFE11D48)
-private val PremiumSoftBlue = Color(0xFFE0F2FE)
-private val PremiumSoftGreen = Color(0xFFD1FAE5)
-private val PremiumSoftOrange = Color(0xFFFFEDD5)
-private val PremiumSoftRed = Color(0xFFFFE4E6)
+
+private val PremiumBackground: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.background
+
+private val PremiumCard: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surface
+
+private val PremiumText: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
+
+private val PremiumMuted: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+private val PremiumBorder: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.outlineVariant
+
+private val PremiumSoftBlue: Color
+    @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)
+
+private val PremiumSoftGreen: Color
+    @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF064E3B) else Color(0xFFD1FAE5)
+
+private val PremiumSoftOrange: Color
+    @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF7C2D12) else Color(0xFFFFEDD5)
+
+private val PremiumSoftRed: Color
+    @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xFF881337) else Color(0xFFFFE4E6)
 
 // Shared gradient so the floating pill and the footer button read as the same control
 private val ManageGradient = Brush.horizontalGradient(
@@ -71,13 +92,13 @@ fun DashboardScreen(
     hostelId: String,
     onBackClick: () -> Unit,
     onManageHostelClick: () -> Unit,
-    viewModel: DashboardViewModel = viewModel()
+    viewModel: DashboardViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) {
         viewModel.setHostelId(hostelId)
     }
 
-    val stats by viewModel.stats.collectAsState()
+    val stats by viewModel.stats.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
@@ -350,7 +371,7 @@ private fun DashboardContent(
 
     WideMetricCard(
         title = "Rent Collected",
-        value = formatCurrency(stats.rentCollectedThisMonth),
+        value = formatRupees(stats.rentCollectedThisMonth),
         caption = "Received in $currentMonthTitle",
         accent = PremiumSky,
         softAccent = PremiumSoftBlue
@@ -505,7 +526,7 @@ private fun HeroProfitCard(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        formatCurrency(profitPaise),
+                        formatRupees(profitPaise),
                         color = if (isLoss) Color(0xFFFF8FA3) else Color.White,
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
@@ -519,12 +540,12 @@ private fun HeroProfitCard(
                 ) {
                     HeroMiniStat(
                         title = "Collected",
-                        value = formatCurrency(incomePaise),
+                        value = formatRupees(incomePaise),
                         modifier = Modifier.weight(1f)
                     )
                     HeroMiniStat(
                         title = "Spent",
-                        value = formatCurrency(expensePaise),
+                        value = formatRupees(expensePaise),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -850,7 +871,7 @@ private fun StatementCard(
                         }
                     }
                     Text(
-                        formatCurrency(row.amountPaise),
+                        formatRupees(row.amountPaise),
                         style = MaterialTheme.typography.titleLarge,
                         color = amountColor,
                         fontWeight = FontWeight.Bold,
@@ -875,13 +896,4 @@ private fun StatementCard(
 private fun formatMonthTitle(yearMonth: YearMonth): String {
     val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     return "$monthName - ${yearMonth.year}"
-}
-
-fun formatCurrency(amountPaise: Long): String {
-    val rupees = abs(amountPaise) / 100
-    val formatted = NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
-        maximumFractionDigits = 0
-        minimumFractionDigits = 0
-    }.format(rupees)
-    return if (amountPaise < 0) "-₹$formatted" else "₹$formatted"
 }

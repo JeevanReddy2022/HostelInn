@@ -35,7 +35,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +48,8 @@ import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppText
 
@@ -59,13 +60,13 @@ fun PastResidentsScreen(
     onBackClick: () -> Unit,
     onReAdmitClick: (String) -> Unit,
     onPastResidentClick: (String) -> Unit, // NEW: Callback for tapping the card
-    viewModel: PastResidentsViewModel = viewModel()
+    viewModel: PastResidentsViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) {
         viewModel.setHostelId(hostelId)
     }
 
-    val pastResidents by viewModel.pastResidents.collectAsState()
+    val pastResidents by viewModel.pastResidents.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = AppBackground,

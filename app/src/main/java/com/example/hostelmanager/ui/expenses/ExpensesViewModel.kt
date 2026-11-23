@@ -3,8 +3,9 @@ package com.example.hostelmanager.ui.expenses
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Expense
+import com.example.hostelmanager.data.repository.ExpenseRepository
+import com.example.hostelmanager.util.ImageStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +16,6 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
-
-/* ------------------------------------------------------------------ */
-/*  Search / filter / sort model                                       */
-/* ------------------------------------------------------------------ */
 
 enum class ExpenseSort(val label: String, val short: String, val caption: String) {
     DATE_DESC("Date · Newest first", "Date ↓", "Most recent expense date on top"),
@@ -82,23 +79,18 @@ internal fun filterAndSortExpenses(
     return filtered.sortedWith(comparator)
 }
 
-/* ------------------------------------------------------------------ */
-/*  ViewModel                                                          */
-/* ------------------------------------------------------------------ */
-
-class ExpensesViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val expenseDao = db.expenseDao()
+class ExpensesViewModel(
+    application: Application,
+    private val expenseRepository: ExpenseRepository
+) : AndroidViewModel(application) {
 
     private val _hostelId = MutableStateFlow("")
 
     val expenses: StateFlow<List<Expense>> = _hostelId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(emptyList())
-        else expenseDao.getAllExpensesForHostel(id)
+        else expenseRepository.getAllExpensesForHostel(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Lives in the ViewModel so search + filters survive tab switches and rotation.
     private val _filters = MutableStateFlow(ExpenseFilters())
     val filters: StateFlow<ExpenseFilters> = _filters
 
@@ -125,14 +117,17 @@ class ExpensesViewModel(application: Application) : AndroidViewModel(application
         _filters.value = _filters.value.copy(sort = value)
     }
 
-    /** Resets search + filters, keeps the chosen sort order. */
     fun clearFilters() {
         _filters.value = _filters.value.copy(query = "", month = null, category = null)
     }
 
     fun deleteExpense(expenseId: String) {
         viewModelScope.launch {
-            expenseDao.deleteExpense(expenseId)
+            val current = expenses.value.find { it.id == expenseId }
+            expenseRepository.deleteExpense(Expense(id = expenseId, hostelId = "", expenseDate = "", enteredDate = "", category = "", amountPaise = 0))
+            if (current?.receiptImagePath != null) {
+                ImageStore.deleteImage(getApplication(), current.receiptImagePath)
+            }
         }
     }
 
@@ -147,9 +142,8 @@ class ExpensesViewModel(application: Application) : AndroidViewModel(application
         receiptImagePath: String?
     ) {
         viewModelScope.launch {
-            // Keep the original createdAt so "Recently added" stays truthful after an edit.
-            val original = expenses.value.firstOrNull { it.id == id }
-            expenseDao.insertExpense(
+            val original = expenses.value.find { it.id == id }
+            expenseRepository.insertExpense(
                 Expense(
                     id = id,
                     hostelId = hostelId,
@@ -162,6 +156,9 @@ class ExpensesViewModel(application: Application) : AndroidViewModel(application
                     createdAt = original?.createdAt ?: System.currentTimeMillis()
                 )
             )
+            if (original?.receiptImagePath != null && original.receiptImagePath != receiptImagePath) {
+                ImageStore.deleteImage(getApplication(), original.receiptImagePath)
+            }
         }
     }
 }

@@ -1,9 +1,12 @@
 package com.example.hostelmanager.ui.reports
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
+import com.example.hostelmanager.data.repository.ExpenseRepository
+import com.example.hostelmanager.data.repository.HostelRepository
+import com.example.hostelmanager.data.repository.PaymentRepository
+import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,11 +27,13 @@ data class MonthlyReport(
     val expenseBreakdown: List<ExpenseBreakdown>
 )
 
-class ReportsViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val paymentDao = db.paymentDao()
-    private val expenseDao = db.expenseDao()
+class ReportsViewModel(
+    private val hostelRepository: HostelRepository,
+    private val roomRepository: RoomRepository,
+    private val residentRepository: ResidentRepository,
+    private val paymentRepository: PaymentRepository,
+    private val expenseRepository: ExpenseRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
     private val _selectedMonth = MutableStateFlow(
@@ -47,18 +52,15 @@ class ReportsViewModel(application: Application) : AndroidViewModel(application)
             flowOf(MonthlyReport(0, 0, 0, emptyList()))
         } else {
             combine(
-                paymentDao.getAllPaymentsForHostel(hostelId),
-                expenseDao.getAllExpensesForHostel(hostelId)
+                paymentRepository.getAllPaymentsForHostel(hostelId),
+                expenseRepository.getAllExpensesForHostel(hostelId)
             ) { payments, expenses ->
-                // Filter payments for the selected month
                 val monthPayments = payments.filter { it.paymentDate.startsWith(month) }
                 val totalIncome = monthPayments.sumOf { it.amountPaise }
 
-                // Filter expenses for the selected month
                 val monthExpenses = expenses.filter { it.expenseDate.startsWith(month) }
                 val totalExpense = monthExpenses.sumOf { it.amountPaise }
 
-                // Group expenses by category
                 val breakdown = monthExpenses
                     .groupBy { it.category }
                     .map { (category, items) ->

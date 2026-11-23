@@ -3,6 +3,7 @@ package com.example.hostelmanager.ui.components
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -49,15 +50,25 @@ fun ImagePickerField(
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
     var showChooser by remember { mutableStateOf(false) }
 
+    fun savePickedImage(uri: Uri) {
+        val savedPath = ImageStore.saveImage(context, uri)
+        if (savedPath != null) {
+            val oldPath = imagePath
+            onImageCaptured(savedPath)
+            if (!oldPath.isNullOrBlank() && oldPath != savedPath) {
+                ImageStore.deleteImage(context, oldPath)
+            }
+        } else {
+            Toast.makeText(context, "Could not save the image", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // Camera: writes into pendingCaptureUri, reports success
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            pendingCaptureUri?.let { uri ->
-                val savedPath = ImageStore.saveImage(context, uri)
-                onImageCaptured(savedPath)
-            }
+            pendingCaptureUri?.let { uri -> savePickedImage(uri) }
         }
         pendingCaptureUri = null
     }
@@ -66,10 +77,7 @@ fun ImagePickerField(
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            val savedPath = ImageStore.saveImage(context, it)
-            onImageCaptured(savedPath)
-        }
+        uri?.let { savePickedImage(it) }
     }
 
     // Camera permission

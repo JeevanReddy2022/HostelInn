@@ -50,12 +50,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,9 +82,8 @@ import com.example.hostelmanager.ui.theme.AppSoftGreen
 import com.example.hostelmanager.ui.theme.AppSoftOrange
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.formatRupees
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 
 private enum class FilterPicker { AVAILABILITY, FLOOR, SHARING, SORT }
 
@@ -92,13 +92,13 @@ fun RoomListScreen(
     hostelId: String,
     onRoomClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: RoomViewModel = viewModel()
+    viewModel: RoomViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
 
-    val allRooms by viewModel.roomsWithOccupancy.collectAsState()
-    val filters by viewModel.filters.collectAsState()
-    val roomError by viewModel.roomExistsError.collectAsState()
+    val allRooms by viewModel.roomsWithOccupancy.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val roomError by viewModel.roomExistsError.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var activePicker by remember { mutableStateOf<FilterPicker?>(null) }
@@ -909,15 +909,3 @@ private fun NoMatchingRooms(query: String, onClearAll: () -> Unit) {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-private fun formatRupees(amountPaise: Long): String {
-    val rupees = amountPaise / 100
-    val formatted = NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
-        maximumFractionDigits = 0
-        minimumFractionDigits = 0
-    }.format(rupees)
-    return "₹$formatted"
-}

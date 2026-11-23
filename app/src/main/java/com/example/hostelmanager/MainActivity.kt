@@ -30,9 +30,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val appContainer = (application as HostelManagerApplication).container
         setContent {
-            HostelManagerTheme {
-                val navController = rememberNavController()
+            androidx.compose.runtime.CompositionLocalProvider(com.example.hostelmanager.di.LocalAppContainer provides appContainer) {
+                HostelManagerTheme {
+                    val navController = rememberNavController()
 
                 NavHost(navController = navController, startDestination = "hostel_list") {
 
@@ -260,4 +262,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 }

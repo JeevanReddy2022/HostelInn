@@ -43,11 +43,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,16 +85,16 @@ fun ResidentDetailsScreen(
     onEditClick: () -> Unit,
     onTransferClick: () -> Unit,
     onCheckoutClick: () -> Unit,
-    viewModel: ResidentDetailsViewModel = viewModel()
+    viewModel: ResidentDetailsViewModel = appViewModel()
 ) {
     LaunchedEffect(personId) {
         viewModel.setPersonId(personId)
     }
 
-    val person by viewModel.person.collectAsState()
-    val activeStay by viewModel.activeStay.collectAsState()
-    val room by viewModel.room.collectAsState()
-    val payments by viewModel.payments.collectAsState()
+    val person by viewModel.person.collectAsStateWithLifecycle()
+    val activeStay by viewModel.activeStay.collectAsStateWithLifecycle()
+    val room by viewModel.room.collectAsStateWithLifecycle()
+    val payments by viewModel.payments.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var showEditConfirmDialog by remember { mutableStateOf(false) }

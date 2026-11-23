@@ -1,11 +1,11 @@
 package com.example.hostelmanager.ui.payments
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.PaymentWithDetails
 import com.example.hostelmanager.data.ResidentWithRoom
+import com.example.hostelmanager.data.repository.PaymentRepository
+import com.example.hostelmanager.data.repository.ResidentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,23 +16,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class PaymentHistoryViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val personDao = db.personDao()
-    private val paymentDao = db.paymentDao()
+class PaymentHistoryViewModel(
+    private val paymentRepository: PaymentRepository,
+    private val residentRepository: ResidentRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
     private val _selectedMonth = MutableStateFlow<String?>(null)
     private val _selectedPersonId = MutableStateFlow<String?>(null)
 
-    // Kept for the dropdown filter
     val residents: StateFlow<List<ResidentWithRoom>> = _hostelId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(emptyList())
-        else personDao.getActiveResidentsByHostel(id)
+        else residentRepository.getActiveResidentsByHostel(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // NEW: Uses the SQL JOIN to get historical room/rent data
     val payments: StateFlow<List<PaymentWithDetails>> = combine(
         _hostelId,
         _selectedMonth,
@@ -43,7 +40,7 @@ class PaymentHistoryViewModel(application: Application) : AndroidViewModel(appli
         if (hostelId.isEmpty()) {
             flowOf(emptyList())
         } else {
-            paymentDao.getAllPaymentsWithDetailsForHostel(hostelId).map { allPayments ->
+            paymentRepository.getAllPaymentsWithDetailsForHostel(hostelId).map { allPayments ->
                 allPayments.filter { paymentWithDetails ->
                     val p = paymentWithDetails.payment
                     val matchesMonth = month == null || p.paymentDate.startsWith(month)
@@ -68,7 +65,7 @@ class PaymentHistoryViewModel(application: Application) : AndroidViewModel(appli
 
     fun deletePayment(paymentId: String) {
         viewModelScope.launch {
-            paymentDao.deletePayment(paymentId)
+            paymentRepository.deletePayment(paymentId)
         }
     }
 }

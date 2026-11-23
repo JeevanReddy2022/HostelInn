@@ -52,18 +52,21 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
+
 @Composable
 fun ReportsScreen(
     hostelId: String,
     modifier: Modifier = Modifier,
-    viewModel: ReportsViewModel = viewModel()
+    viewModel: ReportsViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) {
         viewModel.setHostelId(hostelId)
     }
 
-    val report by viewModel.report.collectAsState()
-    val selectedMonth by viewModel.selectedMonth.collectAsState()
+    val report by viewModel.report.collectAsStateWithLifecycle()
+    val selectedMonth by viewModel.selectedMonth.collectAsStateWithLifecycle()
 
     val yearMonth = YearMonth.parse(selectedMonth)
     val monthDisplay = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}"

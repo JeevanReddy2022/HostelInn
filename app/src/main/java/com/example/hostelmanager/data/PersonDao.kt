@@ -71,23 +71,14 @@ interface PersonDao {
     """)
     fun getPastResidentsByHostel(hostelId: String): Flow<List<ResidentWithRoom>>
 
-    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.phone = :phone")
-    suspend fun isPhoneDuplicate(phone: String): Boolean
+    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.phone = :phone AND (:excludePersonId IS NULL OR p.id != :excludePersonId)")
+    suspend fun isPhoneDuplicate(phone: String, excludePersonId: String? = null): Boolean
 
-    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.govtIdNumber = :govtId")
-    suspend fun isGovtIdDuplicate(govtId: String): Boolean
+    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.govtIdNumber = :govtId AND (:excludePersonId IS NULL OR p.id != :excludePersonId)")
+    suspend fun isGovtIdDuplicate(govtId: String, excludePersonId: String? = null): Boolean
 
-    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.emergencyContact = :emergency")
-    suspend fun isEmergencyDuplicate(emergency: String): Boolean
-
-    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.phone = :phone AND p.id != :excludePersonId")
-    suspend fun isPhoneDuplicateExcluding(phone: String, excludePersonId: String): Boolean
-
-    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.govtIdNumber = :govtId AND p.id != :excludePersonId")
-    suspend fun isGovtIdDuplicateExcluding(govtId: String, excludePersonId: String): Boolean
-
-    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.emergencyContact = :emergency AND p.id != :excludePersonId")
-    suspend fun isEmergencyDuplicateExcluding(emergency: String, excludePersonId: String): Boolean
+    @Query("SELECT COUNT(*) FROM persons p INNER JOIN stays s ON p.id = s.personId WHERE s.isActive = 1 AND p.emergencyContact = :emergency AND (:excludePersonId IS NULL OR p.id != :excludePersonId)")
+    suspend fun isEmergencyDuplicate(emergency: String, excludePersonId: String? = null): Boolean
 
     // All residents (active + checked out) with their most recent stay in this hostel
     @Query("""

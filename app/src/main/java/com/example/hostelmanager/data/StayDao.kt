@@ -35,6 +35,10 @@ interface StayDao {
     @Query("SELECT * FROM stays WHERE personId = :personId AND isActive = 1 ORDER BY joinDate DESC LIMIT 1")
     fun getActiveStayByPerson(personId: String): Flow<Stay?>
 
+    // One-shot lookup for write paths (record payment, re-admit guard).
+    @Query("SELECT * FROM stays WHERE personId = :personId AND isActive = 1 ORDER BY joinDate DESC LIMIT 1")
+    suspend fun getActiveStayForPerson(personId: String): Stay?
+
     @Query("SELECT COUNT(*) FROM stays WHERE hostelId = :hostelId AND isActive = 1")
     fun getActiveResidentsCount(hostelId: String): Flow<Int>
 

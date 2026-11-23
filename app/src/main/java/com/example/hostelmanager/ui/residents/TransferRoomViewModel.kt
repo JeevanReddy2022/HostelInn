@@ -1,13 +1,13 @@
 package com.example.hostelmanager.ui.residents
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Person
 import com.example.hostelmanager.data.RoomEntity
 import com.example.hostelmanager.data.RoomWithOccupancy
 import com.example.hostelmanager.data.Stay
+import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,34 +15,32 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 
-class TransferRoomViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val personDao = db.personDao()
-    private val stayDao = db.stayDao()
-    private val roomDao = db.roomDao()
+class TransferRoomViewModel(
+    private val residentRepository: ResidentRepository,
+    private val roomRepository: RoomRepository
+) : ViewModel() {
 
     private val _personId = MutableStateFlow("")
 
     val person: StateFlow<Person?> = _personId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(null) else personDao.getPersonByIdFlow(id)
+        if (id.isEmpty()) flowOf(null) else residentRepository.getPersonByIdFlow(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val activeStay: StateFlow<Stay?> = _personId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(null) else stayDao.getActiveStayByPerson(id)
+        if (id.isEmpty()) flowOf(null) else residentRepository.getActiveStayByPerson(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val currentRoom: StateFlow<RoomEntity?> = _personId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(null)
-        else stayDao.getActiveStayByPerson(id).flatMapLatest { stay ->
-            if (stay == null) flowOf(null) else roomDao.getRoomById(stay.roomId)
+        else residentRepository.getActiveStayByPerson(id).flatMapLatest { stay ->
+            if (stay == null) flowOf(null) else roomRepository.getRoomById(stay.roomId)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val availableRooms: StateFlow<List<RoomWithOccupancy>> = _personId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(emptyList())
-        else stayDao.getActiveStayByPerson(id).flatMapLatest { stay ->
-            if (stay == null) flowOf(emptyList()) else roomDao.getRoomsWithOccupancy(stay.hostelId)
+        else residentRepository.getActiveStayByPerson(id).flatMapLatest { stay ->
+            if (stay == null) flowOf(emptyList()) else roomRepository.getRoomsWithOccupancy(stay.hostelId)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -80,27 +78,11 @@ class TransferRoomViewModel(application: Application) : AndroidViewModel(applica
             return false
         }
 
-        // Close the old stay (history kept)
-        stayDao.updateStay(
-            stay.copy(
-                isActive = false,
-                checkoutDate = transferDate,
-                updatedAt = System.currentTimeMillis()
-            )
-        )
-
-        // NEW: carry the billing anchor day forward to the new stay
-        stayDao.insertStay(
-            Stay(
-                personId = stay.personId,
-                hostelId = stay.hostelId,
-                roomId = newRoomId,
-                joinDate = transferDate,
-                monthlyRent = newRentPaise,
-                depositCollected = stay.depositCollected,
-                billingAnchorDay = stay.billingAnchorDay,
-                isActive = true
-            )
+        residentRepository.transferRoom(
+            stay = stay,
+            newRoomId = newRoomId,
+            transferDate = transferDate,
+            newRentPaise = newRentPaise
         )
 
         return true

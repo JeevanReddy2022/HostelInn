@@ -3,8 +3,9 @@ package com.example.hostelmanager.ui.residents
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Person
+import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.util.ImageStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,15 +13,15 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 
-class EditResidentViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val personDao = db.personDao()
+class EditResidentViewModel(
+    application: Application,
+    private val residentRepository: ResidentRepository
+) : AndroidViewModel(application) {
 
     private val _personId = MutableStateFlow("")
 
     val person: StateFlow<Person?> = _personId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(null) else personDao.getPersonByIdFlow(id)
+        if (id.isEmpty()) flowOf(null) else residentRepository.getPersonByIdFlow(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _phoneError = MutableStateFlow<String?>(null)
@@ -50,23 +51,22 @@ class EditResidentViewModel(application: Application) : AndroidViewModel(applica
 
         var hasDuplicates = false
 
-        if (personDao.isPhoneDuplicateExcluding(phone, personId)) {
+        if (residentRepository.isPhoneDuplicate(phone, personId)) {
             _phoneError.value = "This phone number is already in use!"
             hasDuplicates = true
         }
-        if (personDao.isGovtIdDuplicateExcluding(govtIdNumber, personId)) {
+        if (residentRepository.isGovtIdDuplicate(govtIdNumber, personId)) {
             _govtIdError.value = "This Govt ID is already in use!"
             hasDuplicates = true
         }
-        if (personDao.isEmergencyDuplicateExcluding(emergencyContact, personId)) {
+        if (residentRepository.isEmergencyDuplicate(emergencyContact, personId)) {
             _emergencyError.value = "This emergency contact is already in use!"
             hasDuplicates = true
         }
 
         if (hasDuplicates) return false
 
-        // copy() keeps the same id + createdAt; only these fields change
-        personDao.updatePerson(
+        residentRepository.updatePerson(
             current.copy(
                 name = name,
                 phone = phone,
@@ -82,6 +82,18 @@ class EditResidentViewModel(application: Application) : AndroidViewModel(applica
                 updatedAt = System.currentTimeMillis()
             )
         )
+
+        // Delete unreferenced previous images
+        val previousImages = setOf(
+            current.govtIdPhotoPath,
+            current.govtIdBackPath,
+            current.profilePhotoPath
+        )
+        val currentImages = setOf(govtFrontPath, govtBackPath, profilePhotoPath)
+        previousImages.minus(currentImages).forEach { path ->
+            ImageStore.deleteImage(getApplication(), path)
+        }
+
         return true
     }
 }

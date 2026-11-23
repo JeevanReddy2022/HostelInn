@@ -40,12 +40,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -74,16 +75,16 @@ import java.time.format.DateTimeFormatter
 fun EditResidentScreen(
     personId: String,
     onBackClick: () -> Unit,
-    viewModel: EditResidentViewModel = viewModel() // ✅ Correct ViewModel
+    viewModel: EditResidentViewModel = appViewModel()
 ) {
     LaunchedEffect(personId) {
         viewModel.setPersonId(personId)
     }
 
-    val person by viewModel.person.collectAsState()
-    val phoneError by viewModel.phoneError.collectAsState()
-    val govtIdError by viewModel.govtIdError.collectAsState()
-    val emergencyError by viewModel.emergencyError.collectAsState()
+    val person by viewModel.person.collectAsStateWithLifecycle()
+    val phoneError by viewModel.phoneError.collectAsStateWithLifecycle()
+    val govtIdError by viewModel.govtIdError.collectAsStateWithLifecycle()
+    val emergencyError by viewModel.emergencyError.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current

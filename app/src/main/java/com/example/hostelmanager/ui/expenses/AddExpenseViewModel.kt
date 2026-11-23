@@ -1,16 +1,12 @@
 package com.example.hostelmanager.ui.expenses
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
+import androidx.lifecycle.ViewModel
 import com.example.hostelmanager.data.Expense
-import kotlinx.coroutines.launch
+import com.example.hostelmanager.data.repository.ExpenseRepository
 
-class AddExpenseViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val expenseDao = db.expenseDao()
+class AddExpenseViewModel(
+    private val expenseRepository: ExpenseRepository
+) : ViewModel() {
 
     suspend fun addExpense(
         hostelId: String,
@@ -24,7 +20,7 @@ class AddExpenseViewModel(application: Application) : AndroidViewModel(applicati
         if (hostelId.isEmpty() || expenseDate.isEmpty() || enteredDate.isEmpty() ||
             category.isEmpty() || amountPaise <= 0) return false
 
-        expenseDao.insertExpense(
+        expenseRepository.insertExpense(
             Expense(
                 hostelId = hostelId,
                 expenseDate = expenseDate,

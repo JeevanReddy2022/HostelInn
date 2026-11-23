@@ -48,6 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hostelmanager.data.Hostel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
@@ -62,9 +64,9 @@ import com.example.hostelmanager.ui.theme.AppText
 @Composable
 fun HostelListScreen(
     onHostelClick: (String) -> Unit,
-    viewModel: HostelViewModel = viewModel()
+    viewModel: HostelViewModel = appViewModel()
 ) {
-    val hostels by viewModel.hostels.collectAsState()
+    val hostels by viewModel.hostels.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(

@@ -1,10 +1,13 @@
 package com.example.hostelmanager.ui.dashboard
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hostelmanager.data.AppDatabase
 import com.example.hostelmanager.data.Hostel
+import com.example.hostelmanager.data.repository.ExpenseRepository
+import com.example.hostelmanager.data.repository.HostelRepository
+import com.example.hostelmanager.data.repository.PaymentRepository
+import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.data.repository.RoomRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,14 +38,13 @@ data class DashboardStats(
     val profitYTD: Long
 )
 
-class DashboardViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getDatabase(application)
-    private val hostelDao = db.hostelDao()
-    private val stayDao = db.stayDao()
-    private val paymentDao = db.paymentDao()
-    private val expenseDao = db.expenseDao()
-    private val roomDao = db.roomDao()
+class DashboardViewModel(
+    private val hostelRepository: HostelRepository,
+    private val residentRepository: ResidentRepository,
+    private val roomRepository: RoomRepository,
+    private val paymentRepository: PaymentRepository,
+    private val expenseRepository: ExpenseRepository
+) : ViewModel() {
 
     private val _hostelId = MutableStateFlow("")
 
@@ -61,20 +63,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             flowOf(null)
         } else {
             combine(
-                hostelDao.getAllHostels(),
-                stayDao.getActiveResidentsCount(hostelId),
-                stayDao.getCheckInsCount(hostelId, thisMonthPattern),
-                paymentDao.getPaymentsCountForMonth(hostelId, thisMonthPattern),
-                paymentDao.getTotalRentCollected(hostelId, thisMonthPattern),
-                roomDao.getTotalBedsForHostel(hostelId),
-                expenseDao.getTotalExpensesForDate(hostelId, todayStr),
-                expenseDao.getTotalExpensesForMonth(hostelId, thisMonthPattern),
-                expenseDao.getTotalExpensesForMonth(hostelId, lastMonthPattern),
-                paymentDao.getTotalPaymentsForDate(hostelId, todayStr),
-                paymentDao.getTotalPaymentsBetween(hostelId, "${lastMonth.year}-${String.format("%02d", lastMonth.monthValue)}-01",
+                hostelRepository.getAllHostels(),
+                hostelRepository.getActiveResidentsCount(hostelId),
+                hostelRepository.getCheckInsCount(hostelId, thisMonthPattern),
+                paymentRepository.getPaymentsCountForMonth(hostelId, thisMonthPattern),
+                paymentRepository.getTotalRentCollected(hostelId, thisMonthPattern),
+                hostelRepository.getTotalBedsForHostel(hostelId),
+                expenseRepository.getTotalExpensesForDate(hostelId, todayStr),
+                expenseRepository.getTotalExpensesForMonth(hostelId, thisMonthPattern),
+                expenseRepository.getTotalExpensesForMonth(hostelId, lastMonthPattern),
+                paymentRepository.getTotalPaymentsForDate(hostelId, todayStr),
+                paymentRepository.getTotalPaymentsBetween(hostelId, "${lastMonth.year}-${String.format("%02d", lastMonth.monthValue)}-01",
                     lastMonth.atEndOfMonth().format(DateTimeFormatter.ISO_LOCAL_DATE)),
-                paymentDao.getTotalPaymentsBetween(hostelId, yearStartStr, todayStr),
-                expenseDao.getTotalExpensesBetween(hostelId, yearStartStr, todayStr)
+                paymentRepository.getTotalPaymentsBetween(hostelId, yearStartStr, todayStr),
+                expenseRepository.getTotalExpensesBetween(hostelId, yearStartStr, todayStr)
             ) { values ->
                 val hostels = values[0] as List<Hostel>
                 val activeResidents = values[1] as Int

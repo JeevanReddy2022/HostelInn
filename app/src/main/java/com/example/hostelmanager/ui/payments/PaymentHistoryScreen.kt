@@ -56,19 +56,22 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentHistoryScreen(
     hostelId: String,
     onBackClick: () -> Unit,
-    viewModel: PaymentHistoryViewModel = viewModel()
+    viewModel: PaymentHistoryViewModel = appViewModel()
 ) {
     LaunchedEffect(hostelId) {
         viewModel.setHostelId(hostelId)
     }
 
-    val payments by viewModel.payments.collectAsState()
-    val residents by viewModel.residents.collectAsState()
+    val payments by viewModel.payments.collectAsStateWithLifecycle()
+    val residents by viewModel.residents.collectAsStateWithLifecycle()
 
     var selectedMonth by remember { mutableStateOf<String?>(null) }
     var selectedPersonId by remember { mutableStateOf<String?>(null) }

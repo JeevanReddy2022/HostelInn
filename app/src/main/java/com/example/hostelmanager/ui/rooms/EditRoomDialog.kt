@@ -2,13 +2,10 @@ package com.example.hostelmanager.ui.rooms
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,13 +18,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.hostelmanager.data.RoomEntity
-import com.example.hostelmanager.ui.theme.AppBorder
+import com.example.hostelmanager.domain.validation.AmountRules
+import com.example.hostelmanager.ui.components.ValidatedTextField
 import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.ui.theme.AppGreen
 import com.example.hostelmanager.ui.theme.AppMuted
-import com.example.hostelmanager.ui.theme.AppNavy
-import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.rupeesToPaise
 
 @Composable
 fun EditRoomDialog(
@@ -39,33 +37,17 @@ fun EditRoomDialog(
     var roomNumber by remember { mutableStateOf(room.roomNumber) }
     var floor by remember { mutableStateOf(room.floor.toString()) }
     var beds by remember { mutableStateOf(room.bedCount.toString()) }
-    var rent by remember { mutableStateOf((room.defaultRentPerBed / 100).toString()) }
+    var rent by remember { mutableStateOf(room.defaultRentPerBed.paiseToRupees().toString()) }
 
     val bedsInt = beds.toIntOrNull() ?: 0
     val isBedsNumberValid = bedsInt >= 1
     val isBedsEnough = bedsInt >= occupiedBeds
-    val isFormValid = roomNumber.isNotBlank() && isBedsNumberValid && isBedsEnough && rent.isNotBlank()
-
-    // Explicit high-contrast colors for text fields
-    val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = AppText,
-        unfocusedTextColor = AppText,
-        disabledTextColor = AppMuted,
-        focusedLabelColor = AppNavy,
-        unfocusedLabelColor = AppMuted,
-        disabledLabelColor = AppMuted,
-        focusedBorderColor = AppNavy,
-        unfocusedBorderColor = AppBorder,
-        disabledBorderColor = AppBorder,
-        errorBorderColor = AppRed,
-        errorLabelColor = AppRed,
-        errorTextColor = AppText,
-        errorSupportingTextColor = AppRed
-    )
+    val rentErr = AmountRules.validateAmount(rent, "Rent per bed")
+    val isFormValid = roomNumber.isNotBlank() && isBedsNumberValid && isBedsEnough && rentErr == null
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(24.dp),
         containerColor = AppCard,
         titleContentColor = AppText,
         textContentColor = AppText,
@@ -78,54 +60,42 @@ fun EditRoomDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                ValidatedTextField(
                     value = roomNumber,
                     onValueChange = { roomNumber = it },
-                    label = { Text("Room Number *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = textFieldColors
+                    label = "Room Number *",
+                    error = if (roomNumber.isBlank()) "Room number is required" else null
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
+                ValidatedTextField(
                     value = floor,
                     onValueChange = { input -> floor = input.filter { it.isDigit() } },
-                    label = { Text("Floor") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = textFieldColors,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    label = "Floor",
+                    error = if (floor.isBlank()) "Floor is required" else null,
+                    keyboardType = KeyboardType.Number
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
+                ValidatedTextField(
                     value = beds,
                     onValueChange = { input -> beds = input.filter { it.isDigit() } },
-                    label = { Text("Number of Beds *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = textFieldColors,
-                    isError = beds.isNotBlank() && (!isBedsNumberValid || !isBedsEnough),
-                    supportingText = {
-                        if (beds.isNotBlank() && !isBedsNumberValid) {
-                            Text("Must be at least 1")
-                        } else if (!isBedsEnough) {
-                            Text("$occupiedBeds resident(s) live here. Beds cannot be below $occupiedBeds.")
-                        }
+                    label = "Number of Beds *",
+                    error = when {
+                        !isBedsNumberValid -> "Must be at least 1"
+                        !isBedsEnough -> "$occupiedBeds resident(s) live here. Beds cannot be below $occupiedBeds."
+                        else -> null
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardType = KeyboardType.Number
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
+                ValidatedTextField(
                     value = rent,
-                    onValueChange = { input -> rent = input.filter { it.isDigit() } },
-                    label = { Text("Rent per Bed (₹) *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = textFieldColors,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    onValueChange = { input -> rent = input.filter { it.isDigit() }.take(6) },
+                    label = "Rent per Bed (₹) *",
+                    error = rentErr,
+                    keyboardType = KeyboardType.Number
                 )
             }
         },
@@ -136,7 +106,7 @@ fun EditRoomDialog(
                         roomNumber.trim(),
                         floor.toIntOrNull() ?: 0,
                         bedsInt,
-                        (rent.toLongOrNull() ?: 0L) * 100
+                        rent.rupeesToPaise()
                     )
                 },
                 enabled = isFormValid

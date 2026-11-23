@@ -79,4 +79,7 @@ interface PaymentDao {
         ORDER BY paymentDate DESC
     """)
     suspend fun getPaymentsInCycle(stayId: String, cycleStart: String, cycleEnd: String): List<Payment>
+
+    @Query("SELECT * FROM payments WHERE hostelId = :hostelId")
+    suspend fun getAllPaymentsForHostelOnce(hostelId: String): List<Payment>
 }

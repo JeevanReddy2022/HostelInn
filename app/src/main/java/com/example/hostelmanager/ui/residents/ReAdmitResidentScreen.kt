@@ -1,7 +1,6 @@
 package com.example.hostelmanager.ui.residents
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -20,39 +18,30 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -60,30 +49,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.data.RoomWithOccupancy
+import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.domain.validation.AmountRules
+import com.example.hostelmanager.domain.validation.DateRules
+import com.example.hostelmanager.ui.components.AppDateField
+import com.example.hostelmanager.ui.components.ValidatedTextField
+import com.example.hostelmanager.ui.components.appTextFieldColors
 import com.example.hostelmanager.ui.rooms.RoomPickerDialog
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
-import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.rupeesToPaise
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-
-private const val PAISE = 100L
-private val FieldShape = RoundedCornerShape(12.dp)
 
 private val RoomWithOccupancy.vacancy get() = room.bedCount - occupiedBeds
-private fun String.toPaise() = (toLongOrNull() ?: 0L) * PAISE
-
-private fun parseDate(s: String): LocalDate? =
-    if (s.length != 10) null else runCatching { LocalDate.parse(s) }.getOrNull()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,15 +77,15 @@ fun ReAdmitResidentScreen(
     personId: String,
     hostelId: String,
     onBackClick: () -> Unit,
-    viewModel: ReAdmitResidentViewModel = viewModel()
+    viewModel: ReAdmitResidentViewModel = appViewModel()
 ) {
     LaunchedEffect(personId, hostelId) {
         viewModel.setPersonId(personId)
         viewModel.setHostelId(hostelId)
     }
 
-    val person by viewModel.person.collectAsState()
-    val roomsForHostel by viewModel.roomsForHostel.collectAsState()
+    val person by viewModel.person.collectAsStateWithLifecycle()
+    val roomsForHostel by viewModel.roomsForHostel.collectAsStateWithLifecycle()
     val availableRooms = remember(roomsForHostel) { roomsForHostel.filter { it.vacancy > 0 } }
 
     val scope = rememberCoroutineScope()
@@ -109,40 +95,15 @@ fun ReAdmitResidentScreen(
     var joinDate by remember { mutableStateOf(today) }
     var rent by remember { mutableStateOf("") }
     var deposit by remember { mutableStateOf("") }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showRoomPicker by remember { mutableStateOf(false) } // NEW
+    var showRoomPicker by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    val dateError by remember {
-        derivedStateOf {
-            if (joinDate.isBlank() || parseDate(joinDate) != null) null
-            else "Enter a valid date (YYYY-MM-DD)"
-        }
-    }
-    val isFormValid by remember {
-        derivedStateOf {
-            selectedRoom != null && joinDate.isNotBlank() && dateError == null &&
-                    rent.isNotBlank() && deposit.isNotBlank()
-        }
-    }
+    val joinDateError = DateRules.validateDate(joinDate, "Join date", notFuture = true)
+    val rentError = AmountRules.validateAmount(rent, "Monthly rent")
+    val depositError = AmountRules.validateAmount(deposit, "Deposit amount", minRupees = 0)
 
-    val textFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = AppText,
-        unfocusedTextColor = AppText,
-        disabledTextColor = AppMuted,
-        errorTextColor = AppText,
-        focusedLabelColor = AppNavy,
-        unfocusedLabelColor = AppMuted,
-        disabledLabelColor = AppMuted,
-        errorLabelColor = AppRed,
-        focusedBorderColor = AppNavy,
-        unfocusedBorderColor = AppBorder,
-        disabledBorderColor = AppBorder,
-        errorBorderColor = AppRed,
-        errorSupportingTextColor = AppRed,
-        cursorColor = AppNavy
-    )
+    val isFormValid = selectedRoom != null && joinDateError == null && rentError == null && depositError == null
 
     Scaffold(
         containerColor = AppBackground,
@@ -179,9 +140,8 @@ fun ReAdmitResidentScreen(
 
             ResidentDetailsCard(phone = person?.phone, govtId = person?.govtIdNumber)
 
-            SectionHeader("New Stay Details")
+            Text("New Stay Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppNavy)
 
-            // ✅ FIXED: Use Box + pointerInput for reliable mobile taps
             val currentRoom = selectedRoom
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
@@ -195,8 +155,8 @@ fun ReAdmitResidentScreen(
                         Icon(Icons.Default.Search, contentDescription = "Search rooms", tint = AppNavy)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = FieldShape,
-                    colors = textFieldColors,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = appTextFieldColors(),
                     supportingText = {
                         if (currentRoom != null) {
                             Text(
@@ -207,7 +167,6 @@ fun ReAdmitResidentScreen(
                     }
                 )
 
-                // Overlay: topmost child, catches the tap
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -215,136 +174,101 @@ fun ReAdmitResidentScreen(
                 )
             }
 
-            OutlinedTextField(
+            AppDateField(
+                label = "Join Date (YYYY-MM-DD) *",
                 value = joinDate,
-                onValueChange = { joinDate = it.trim().take(10) },
-                label = { Text("New Join Date (YYYY-MM-DD) *") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = FieldShape,
-                colors = textFieldColors,
-                isError = dateError != null,
-                supportingText = dateError?.let { { Text(it) } },
-                trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.CalendarToday, "Pick date", tint = AppNavy)
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
+                onValueChange = { joinDate = it },
+                error = joinDateError
             )
 
-            OutlinedTextField(
+            ValidatedTextField(
                 value = rent,
-                onValueChange = { rent = it.filter(Char::isDigit).take(5) },
-                label = { Text("New Monthly Rent (₹) *") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = FieldShape,
-                colors = textFieldColors,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
+                onValueChange = { input -> rent = input.filter { it.isDigit() }.take(6) },
+                label = "Monthly Rent (₹) *",
+                error = rentError,
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next,
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
             )
 
-            OutlinedTextField(
+            ValidatedTextField(
                 value = deposit,
-                onValueChange = { deposit = it.filter(Char::isDigit).take(5) },
-                label = { Text("New Deposit Collected (₹) *") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = FieldShape,
-                colors = textFieldColors,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number,imeAction = ImeAction.Done),
-                //keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                onValueChange = { input -> deposit = input.filter { it.isDigit() }.take(6) },
+                label = "Deposit Collected (₹) *",
+                error = depositError,
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
             )
 
-            Text(
-                "This will create a new active stay for this resident. Their past records remain intact.",
-                style = MaterialTheme.typography.bodySmall,
-                color = AppMuted
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
-            SubmitButton(
-                text = "Re-admit Resident",
+            Button(
+                onClick = { showConfirmDialog = true },
                 enabled = isFormValid,
-                onClick = { showConfirmDialog = true }
-            )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppNavy,
+                    contentColor = Color.White,
+                    disabledContainerColor = AppBorder,
+                    disabledContentColor = AppMuted
+                )
+            ) {
+                Text("Re-admit Resident", fontWeight = FontWeight.Bold)
+            }
         }
     }
 
-    // ✅ Room Picker Dialog
     if (showRoomPicker) {
         RoomPickerDialog(
             rooms = availableRooms,
             onDismiss = { showRoomPicker = false },
-            onSelect = { room ->
-                selectedRoom = room
-                if (rent.isEmpty()) rent = (room.room.defaultRentPerBed / PAISE).toString()
+            onSelect = { roomWithOccupants ->
+                selectedRoom = roomWithOccupants
+                rent = roomWithOccupants.room.defaultRentPerBed.paiseToRupees().toString()
+                showRoomPicker = false
             }
-        )
-    }
-
-    if (showDatePicker) {
-        JoinDatePickerDialog(
-            initialDate = joinDate,
-            onDismiss = { showDatePicker = false },
-            onPicked = { joinDate = it; showDatePicker = false }
         )
     }
 
     if (showConfirmDialog) {
-        ConfirmReAdmitDialog(
-            name = person?.name ?: "this resident",
-            room = selectedRoom?.room?.roomNumber ?: "—",
-            joinDate = joinDate,
-            rent = rent,
-            deposit = deposit,
-            onDismiss = { showConfirmDialog = false },
-            onConfirm = {
-                showConfirmDialog = false
-                selectedRoom?.let { room ->
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Confirm Re-admission", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Re-admit ${person?.name ?: "this resident"} to Room ${selectedRoom?.room?.roomNumber ?: ""} starting $joinDate?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmDialog = false
+                    val room = selectedRoom ?: return@TextButton
+                    val rentPaise = rent.rupeesToPaise()
+                    val depositPaise = deposit.rupeesToPaise()
+
                     scope.launch {
                         val ok = viewModel.reAdmitResident(
-                            room.room.id, joinDate, rent.toPaise(), deposit.toPaise()
+                            roomId = room.room.id,
+                            joinDate = joinDate,
+                            rentPaise = rentPaise,
+                            depositPaise = depositPaise
                         )
                         if (ok) onBackClick()
                     }
+                }) {
+                    Text("Re-admit", color = AppNavy, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancel", color = AppMuted)
                 }
             }
         )
-    }
-}
-
-// ---------- Reusable pieces ----------
-
-@Composable
-private fun SubmitButton(text: String, enabled: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(52.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = AppNavy,
-            contentColor = Color.White,
-            disabledContainerColor = AppBorder,
-            disabledContentColor = AppMuted
-        )
-    ) {
-        Text(text, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-@Composable
-private fun DialogAction(
-    text: String,
-    color: Color,
-    bold: Boolean = false,
-    onClick: () -> Unit
-) {
-    TextButton(onClick = onClick) {
-        Text(text, color = color, fontWeight = if (bold) FontWeight.Bold else null)
     }
 }
 
@@ -352,109 +276,19 @@ private fun DialogAction(
 private fun ResidentDetailsCard(phone: String?, govtId: String?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = AppCard),
-        border = BorderStroke(1.dp, AppBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = BorderStroke(1.dp, AppBorder)
     ) {
-        Column(Modifier.padding(18.dp)) {
-            SectionHeader("Past Resident Details")
-            Spacer(Modifier.height(10.dp))
-            DetailRow("Phone", phone ?: "—")
-            DetailRow("Govt ID", govtId ?: "—")
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun JoinDatePickerDialog(
-    initialDate: String,
-    onDismiss: () -> Unit,
-    onPicked: (String) -> Unit
-) {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = parseDate(initialDate)
-            ?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            DialogAction("OK", AppNavy, bold = true) {
-                state.selectedDateMillis
-                    ?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString() }
-                    ?.let(onPicked)
-                    ?: onDismiss()
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Phone", color = AppMuted, style = MaterialTheme.typography.bodyMedium)
+                Text(phone ?: "—", color = AppText, fontWeight = FontWeight.SemiBold)
             }
-        },
-        dismissButton = { DialogAction("Cancel", AppMuted, onClick = onDismiss) }
-    ) {
-        DatePicker(state = state)
-    }
-}
-
-@Composable
-private fun ConfirmReAdmitDialog(
-    name: String,
-    room: String,
-    joinDate: String,
-    rent: String,
-    deposit: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(24.dp),
-        containerColor = AppCard,
-        titleContentColor = AppText,
-        textContentColor = AppMuted,
-        title = { Text("Confirm re-admission?", fontWeight = FontWeight.Bold) },
-        text = {
-            Text(
-                "Re-admit $name to Room $room starting $joinDate?\n\n" +
-                        "New Rent: ₹$rent\nNew Deposit: ₹$deposit\n\n" +
-                        "A new active stay will be created."
-            )
-        },
-        confirmButton = { DialogAction("Yes, re-admit", AppNavy, bold = true, onClick = onConfirm) },
-        dismissButton = { DialogAction("Cancel", AppMuted, onClick = onDismiss) }
-    )
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Column(Modifier.padding(top = 4.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            color = AppText,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(6.dp))
-        Box(Modifier.width(32.dp).height(2.dp).background(AppNavy))
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppMuted,
-            modifier = Modifier.weight(0.4f)
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = AppText,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(0.6f)
-        )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Govt ID", color = AppMuted, style = MaterialTheme.typography.bodyMedium)
+                Text(govtId ?: "—", color = AppText, fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }
