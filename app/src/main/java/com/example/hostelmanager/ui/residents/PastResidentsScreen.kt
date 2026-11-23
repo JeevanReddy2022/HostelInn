@@ -134,7 +134,7 @@ fun PastResidentsScreen(
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(pastResidents) { resident ->
+                items(pastResidents, key = { it.person.id }) { resident ->
                     PastResidentCard(
                         resident = resident,
                         onReAdmit = { onReAdmitClick(resident.person.id) },

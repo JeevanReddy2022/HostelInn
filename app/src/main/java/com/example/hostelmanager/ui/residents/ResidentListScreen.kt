@@ -453,7 +453,11 @@ fun ResidentAvatar(photoPath: String?) {
             )
         } else {
             AsyncImage(
-                model = File(photoPath),
+                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(File(photoPath))
+                    .size(128)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = "Resident photo",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop

@@ -300,7 +300,7 @@ fun RoomDetailsScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(residents) { residentWithRoom ->
+                    items(residents, key = { it.person.id }) { residentWithRoom ->
                         ResidentDetailCard(
                             residentWithRoom,
                             onClick = { onResidentClick(residentWithRoom.person.id) }

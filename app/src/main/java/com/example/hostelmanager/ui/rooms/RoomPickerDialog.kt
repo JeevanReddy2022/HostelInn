@@ -152,7 +152,7 @@ fun RoomPickerDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 4.dp)
                     ) {
-                        items(filtered) { roomWithOcc ->
+                        items(filtered, key = { it.room.id }) { roomWithOcc ->
                             RoomPickerRow(
                                 roomWithOcc = roomWithOcc,
                                 onClick = {

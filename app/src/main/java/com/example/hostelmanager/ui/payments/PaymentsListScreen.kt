@@ -188,7 +188,7 @@ fun PaymentsListScreen(
                         .padding(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(sortedResidents) { resident ->
+                    items(sortedResidents, key = { it.personId }) { resident ->
                         YetToPayCard(resident, onRecordPaymentClick)
                     }
                 }
@@ -257,7 +257,11 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
                     )
                 } else {
                     AsyncImage(
-                        model = File(resident.profilePhotoPath),
+                        model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                            .data(File(resident.profilePhotoPath))
+                            .size(128)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Resident photo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

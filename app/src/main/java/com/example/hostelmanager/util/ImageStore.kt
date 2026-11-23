@@ -8,6 +8,8 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -40,60 +42,60 @@ object ImageStore {
     /**
      * Copies a photo (from the camera's temp file OR a gallery pick) into permanent
      * app-private storage, downscaling it to keep the database folder small.
-     *
-     * @return the saved file's absolute path, or null if the image could not be read
-     *         or written. Callers should treat null as "no image chosen".
+     * Offloaded to [Dispatchers.IO] to keep the UI responsive.
      */
-    fun saveImage(context: Context, sourceUri: Uri): String? = runCatching {
-        val imagesDir = File(context.filesDir, IMAGES_DIR)
-        if (!imagesDir.exists() && !imagesDir.mkdirs()) {
-            throw IOException("Could not create the images directory")
-        }
-
-        val resolver = context.contentResolver
-        val size = resolver.openInputStream(sourceUri)?.use { input ->
-            BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                .also { BitmapFactory.decodeStream(input, null, it) }
-        } ?: throw IOException("Could not open $sourceUri")
-        if (size.outWidth <= 0 || size.outHeight <= 0) {
-            throw IOException("Image has no pixels")
-        }
-
-        val decodeOptions = BitmapFactory.Options().apply {
-            inSampleSize = sampleSizeFor(size.outWidth, size.outHeight, MAX_DIMENSION)
-        }
-        val decoded = resolver.openInputStream(sourceUri)?.use { input ->
-            BitmapFactory.decodeStream(input, null, decodeOptions)
-        } ?: throw IOException("Could not decode $sourceUri")
-
-        val oriented = applyExifRotation(resolver.openInputStream(sourceUri), decoded)
-
-        val destFile = File(imagesDir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.jpg")
-        try {
-            FileOutputStream(destFile).use { output ->
-                if (!oriented.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)) {
-                    throw IOException("Could not encode the image")
-                }
+    suspend fun saveImage(context: Context, sourceUri: Uri): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val imagesDir = File(context.filesDir, IMAGES_DIR)
+            if (!imagesDir.exists() && !imagesDir.mkdirs()) {
+                throw IOException("Could not create the images directory")
             }
-        } catch (error: Throwable) {
-            destFile.delete()
-            throw error
-        } finally {
-            oriented.recycle()
-        }
 
-        destFile.absolutePath
-    }.getOrElse { error ->
-        Log.w(TAG, "Could not save image from $sourceUri", error)
-        null
+            val resolver = context.contentResolver
+            val size = resolver.openInputStream(sourceUri)?.use { input ->
+                BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    .also { BitmapFactory.decodeStream(input, null, it) }
+            } ?: throw IOException("Could not open $sourceUri")
+            if (size.outWidth <= 0 || size.outHeight <= 0) {
+                throw IOException("Image has no pixels")
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = sampleSizeFor(size.outWidth, size.outHeight, MAX_DIMENSION)
+            }
+            val decoded = resolver.openInputStream(sourceUri)?.use { input ->
+                BitmapFactory.decodeStream(input, null, decodeOptions)
+            } ?: throw IOException("Could not decode $sourceUri")
+
+            val oriented = applyExifRotation(resolver.openInputStream(sourceUri), decoded)
+
+            val destFile = File(imagesDir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.jpg")
+            try {
+                FileOutputStream(destFile).use { output ->
+                    if (!oriented.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)) {
+                        throw IOException("Could not encode the image")
+                    }
+                }
+            } catch (error: Throwable) {
+                destFile.delete()
+                throw error
+            } finally {
+                oriented.recycle()
+            }
+
+            destFile.absolutePath
+        }.getOrElse { error ->
+            Log.w(TAG, "Could not save image from $sourceUri", error)
+            null
+        }
     }
 
     /**
      * Deletes a previously saved image, but only when it lives inside this app's
-     * private images directory. Safe to call with blank or already-deleted paths.
+     * private images directory. Offloaded to [Dispatchers.IO].
      */
-    fun deleteImage(context: Context, path: String?) {
-        if (path.isNullOrBlank()) return
+    suspend fun deleteImage(context: Context, path: String?) = withContext(Dispatchers.IO) {
+        if (path.isNullOrBlank()) return@withContext
         runCatching {
             val imagesDir = File(context.filesDir, IMAGES_DIR).canonicalFile
             val image = File(path).canonicalFile

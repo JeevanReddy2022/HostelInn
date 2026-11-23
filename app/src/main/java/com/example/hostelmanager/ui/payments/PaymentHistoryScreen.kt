@@ -238,7 +238,7 @@ fun PaymentHistoryScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(payments) { paymentWithDetails ->
+                    items(payments, key = { it.payment.id }) { paymentWithDetails ->
                         PaymentCard(
                             paymentWithDetails = paymentWithDetails,
                             onDeleteClick = { paymentToDelete = paymentWithDetails }

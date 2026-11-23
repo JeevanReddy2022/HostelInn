@@ -119,7 +119,7 @@ fun HostelListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp)
             ) {
-                items(hostels) { hostel ->
+                items(hostels, key = { it.id }) { hostel ->
                     HostelCard(hostel, onClick = { onHostelClick(hostel.id) })
                 }
             }

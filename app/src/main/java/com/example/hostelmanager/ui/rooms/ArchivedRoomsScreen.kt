@@ -133,7 +133,7 @@ fun ArchivedRoomsScreen(
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(rooms) { room ->
+                items(rooms, key = { it.id }) { room ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),

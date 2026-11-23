@@ -26,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -50,16 +52,20 @@ fun ImagePickerField(
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
     var showChooser by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     fun savePickedImage(uri: Uri) {
-        val savedPath = ImageStore.saveImage(context, uri)
-        if (savedPath != null) {
-            val oldPath = imagePath
-            onImageCaptured(savedPath)
-            if (!oldPath.isNullOrBlank() && oldPath != savedPath) {
-                ImageStore.deleteImage(context, oldPath)
+        scope.launch {
+            val savedPath = ImageStore.saveImage(context, uri)
+            if (savedPath != null) {
+                val oldPath = imagePath
+                onImageCaptured(savedPath)
+                if (!oldPath.isNullOrBlank() && oldPath != savedPath) {
+                    ImageStore.deleteImage(context, oldPath)
+                }
+            } else {
+                Toast.makeText(context, "Could not save the image", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            Toast.makeText(context, "Could not save the image", Toast.LENGTH_SHORT).show()
         }
     }
 

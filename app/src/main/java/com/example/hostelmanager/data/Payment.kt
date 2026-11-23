@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("stayId"), Index("date")]
+    indices = [Index("stayId"), Index("personId"), Index("hostelId"), Index("paymentDate"), Index("date")]
 )
 data class Payment(
     @PrimaryKey
