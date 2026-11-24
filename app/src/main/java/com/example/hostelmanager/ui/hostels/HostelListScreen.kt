@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.example.hostelmanager.ui.theme.AppOnNavy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -101,7 +102,7 @@ fun HostelListScreen(
                 onClick = { showAddDialog = true },
                 shape = RoundedCornerShape(18.dp),
                 containerColor = AppNavy,
-                contentColor = Color.White,
+                contentColor = AppOnNavy,
                 elevation = FloatingActionButtonDefaults.elevation(6.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Hostel")

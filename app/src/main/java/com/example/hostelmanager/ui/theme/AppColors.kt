@@ -7,14 +7,27 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 // Shared Brand & Status Colors
-val AppNavy = Color(0xFF0B1F33)
-val AppNavyLight = Color(0xFF123B5D)
 val AppSky = Color(0xFF38BDF8)
 val AppGreen = Color(0xFF10B981)
 val AppOrange = Color(0xFFF97316)
 val AppRed = Color(0xFFE11D48)
 
 // Adaptive Theme Token Accessors
+val AppNavy: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.primary
+
+val AppNavyLight: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.primaryContainer
+
+val AppOnNavy: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.onPrimary
+
 val AppBackground: Color
     @Composable
     @ReadOnlyComposable

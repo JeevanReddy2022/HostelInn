@@ -22,7 +22,6 @@ class ReAdmitResidentViewModel(
 
     private val _personId = MutableStateFlow("")
 
-    // Left unchanged per Constraint 4 (keyed by _personId, not hostelId)
     val person: StateFlow<Person?> = _personId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(null) else residentRepository.getPersonByIdFlow(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

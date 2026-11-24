@@ -39,6 +39,12 @@ fun YearMonth.label(): String {
     return "$monthName $year"
 }
 
+/** Formats YearMonth as "Month - YYYY", e.g., "March - 2026". */
+fun YearMonth.labelDashed(): String {
+    val monthName = month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    return "$monthName - $year"
+}
+
 /** Formats "YYYY-MM" string to "Month YYYY". Returns original string if invalid. */
 fun formatMonth(yyyyMm: String): String {
     val parsed = runCatching { YearMonth.parse(yyyyMm) }.getOrNull() ?: return yyyyMm

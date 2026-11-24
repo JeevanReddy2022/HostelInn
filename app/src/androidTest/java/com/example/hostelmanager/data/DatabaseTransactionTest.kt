@@ -79,4 +79,36 @@ class DatabaseTransactionTest {
         val activeStay = stayDao.getActiveStayForPerson("p1")
         assertEquals(null, activeStay)
     }
+
+    @Test
+    fun upsertStayDoesNotCascadeDeleteChildPayments() = runBlocking {
+        val hostel = Hostel(id = "h1", name = "Sunshine Hostel", address = "Main St", phone = "9999999999")
+        hostelDao.insertHostel(hostel)
+
+        val room = RoomEntity(id = "r1", hostelId = "h1", roomNumber = "101", floor = 1, bedCount = 2, defaultRentPerBed = 500000)
+        roomDao.insertRoom(room)
+
+        val person = Person(id = "p1", name = "Alice", phone = "9876543210", govtIdNumber = "ID123", emergencyContact = "911", dateOfBirth = "2000-01-01", address = "123 Main St", gender = "Female", guardianName = "Bob")
+        personDao.insertPerson(person)
+
+        val stay = Stay(id = "s1", personId = "p1", hostelId = "h1", roomId = "r1", joinDate = "2026-01-01", monthlyRent = 500000, depositCollected = 1000000, billingAnchorDay = 1, isActive = true)
+        stayDao.insertStay(stay)
+
+        val payment = Payment(id = "pay1", stayId = "s1", personId = "p1", hostelId = "h1", amountPaise = 500000, mode = "UPI", paymentDate = "2026-01-05", date = "2026-01-05")
+        paymentDao.insertPayment(payment)
+
+        // Call insertStay (now @Upsert) again with same ID and modified monthlyRent
+        val updatedStay = stay.copy(monthlyRent = 600000)
+        stayDao.insertStay(updatedStay)
+
+        // Assert foreign-key child payment still exists (not deleted by CASCADE)
+        val fetchedPayments = paymentDao.getAllPaymentsForHostelOnce("h1")
+        assertEquals(1, fetchedPayments.size)
+        assertEquals("pay1", fetchedPayments[0].id)
+
+        // Assert stay field was updated
+        val fetchedStay = stayDao.getActiveStayForPerson("p1")
+        assertNotNull(fetchedStay)
+        assertEquals(600000L, fetchedStay?.monthlyRent)
+    }
 }

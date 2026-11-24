@@ -46,4 +46,9 @@ class FormattersTest {
     fun `toIsoMonth formats YearMonth to iso string`() {
         assertEquals("2026-03", YearMonth.of(2026, 3).toIsoMonth())
     }
+
+    @Test
+    fun `labelDashed formats YearMonth with a dash`() {
+        assertEquals("March - 2026", YearMonth.of(2026, 3).labelDashed())
+    }
 }

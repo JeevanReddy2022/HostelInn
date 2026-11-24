@@ -41,7 +41,6 @@ class ReportsViewModel(
 
     val selectedMonth: StateFlow<String> = _selectedMonth
 
-    // Left unchanged per Constraint 4 (combined with _selectedMonth)
     val report: StateFlow<MonthlyReport> = combine(
         _hostelId,
         _selectedMonth

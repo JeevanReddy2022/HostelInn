@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.theme.AppOnNavy
 import com.example.hostelmanager.domain.validation.AmountRules
 import com.example.hostelmanager.domain.validation.DateRules
 import com.example.hostelmanager.ui.components.AppDateField
@@ -213,7 +214,7 @@ fun AddExpenseScreen(
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppNavy,
-                    contentColor = Color.White,
+                    contentColor = AppOnNavy,
                     disabledContainerColor = AppBorder,
                     disabledContentColor = AppMuted
                 ),

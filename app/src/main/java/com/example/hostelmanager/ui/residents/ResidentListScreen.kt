@@ -76,6 +76,7 @@ import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
+import com.example.hostelmanager.ui.theme.AppOnNavy
 import com.example.hostelmanager.ui.theme.AppOrange
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftOrange
@@ -155,7 +156,7 @@ fun ResidentListScreen(
             onClick = onAddClick,
             shape = RoundedCornerShape(18.dp),
             containerColor = AppNavy,
-            contentColor = Color.White,
+            contentColor = AppOnNavy,
             elevation = FloatingActionButtonDefaults.elevation(6.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -524,13 +525,13 @@ fun MessageChoiceDialog(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppNavy,
-                        contentColor = Color.White
+                        contentColor = AppOnNavy
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Sms,
                         contentDescription = "SMS",
-                        tint = Color.White,
+                        tint = AppOnNavy,
                         modifier = Modifier.size(26.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))

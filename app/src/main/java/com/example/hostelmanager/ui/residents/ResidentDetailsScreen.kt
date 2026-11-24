@@ -192,21 +192,21 @@ fun ResidentDetailsScreen(
 
                 // Personal Details Card
                 PremiumCard {
-                    SectionHeader("Personal Details")
+                    SectionHeader("Personal Details", topPadding = 4.dp)
                     Spacer(modifier = Modifier.height(10.dp))
-                    DetailRow("Phone", currentPerson.phone)
-                    DetailRow("Govt ID", currentPerson.govtIdNumber)
-                    DetailRow("Emergency", currentPerson.emergencyContact)
-                    DetailRow("Date of Birth", currentPerson.dateOfBirth.ifBlank { "—" })
-                    DetailRow("Address", currentPerson.address.ifBlank { "—" })
-                    DetailRow("Gender", currentPerson.gender)
-                    DetailRow("Guardian", currentPerson.guardianName.ifBlank { "—" })
+                    DetailRow("Phone", currentPerson.phone, weighted = true)
+                    DetailRow("Govt ID", currentPerson.govtIdNumber, weighted = true)
+                    DetailRow("Emergency", currentPerson.emergencyContact, weighted = true)
+                    DetailRow("Date of Birth", currentPerson.dateOfBirth.ifBlank { "—" }, weighted = true)
+                    DetailRow("Address", currentPerson.address.ifBlank { "—" }, weighted = true)
+                    DetailRow("Gender", currentPerson.gender, weighted = true)
+                    DetailRow("Guardian", currentPerson.guardianName.ifBlank { "—" }, weighted = true)
                 }
 
                 // Stay Details Card
                 val stay = activeStay
                 PremiumCard {
-                    SectionHeader("Stay Details")
+                    SectionHeader("Stay Details", topPadding = 4.dp)
                     Spacer(modifier = Modifier.height(10.dp))
 
                     if (stay == null) {
@@ -225,10 +225,10 @@ fun ResidentDetailsScreen(
                             )
                         }
                     } else {
-                        DetailRow("Room", room?.roomNumber ?: "—")
-                        DetailRow("Monthly Rent", stay.monthlyRent.paiseToText())
-                        DetailRow("Join Date", stay.joinDate)
-                        DetailRow("Deposit", stay.depositCollected.paiseToText())
+                        DetailRow("Room", room?.roomNumber ?: "—", weighted = true)
+                        DetailRow("Monthly Rent", stay.monthlyRent.paiseToText(), weighted = true)
+                        DetailRow("Join Date", stay.joinDate, weighted = true)
+                        DetailRow("Deposit", stay.depositCollected.paiseToText(), weighted = true)
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -262,12 +262,12 @@ fun ResidentDetailsScreen(
                 }
 
                 // Govt ID Documents
-                SectionHeader("Govt ID Documents")
+                SectionHeader("Govt ID Documents", topPadding = 4.dp)
                 DocumentImage("Front", currentPerson.govtIdPhotoPath)
                 DocumentImage("Back", currentPerson.govtIdBackPath)
 
                 // Payment History
-                SectionHeader("Payment History")
+                SectionHeader("Payment History", topPadding = 4.dp)
                 if (payments.isEmpty()) {
                     PremiumCard {
                         Text("No payments recorded yet.", style = MaterialTheme.typography.bodyMedium, color = AppMuted)

@@ -48,12 +48,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.data.RoomWithOccupancy
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.theme.AppOnNavy
 import com.example.hostelmanager.util.paiseToText
 import com.example.hostelmanager.ui.components.DetailRow
 import com.example.hostelmanager.domain.validation.AmountRules
 import com.example.hostelmanager.domain.validation.DateRules
 import com.example.hostelmanager.ui.components.AppDateField
 import com.example.hostelmanager.ui.components.ValidatedTextField
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.example.hostelmanager.ui.rooms.RoomPickerDialog
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
@@ -93,6 +99,7 @@ fun TransferRoomScreen(
     var selectedTarget by remember { mutableStateOf<RoomWithOccupancy?>(null) }
     var transferDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var newRent by remember { mutableStateOf("") }
+    var showRoomPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedTarget) {
         val target = selectedTarget
@@ -170,42 +177,58 @@ fun TransferRoomScreen(
                     )
                 }
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    transferTargets.forEach { target ->
-                        val isSelected = target.room.id == selectedTarget?.room?.id
-                        val vacancy = target.room.bedCount - target.occupiedBeds
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedTarget = target
-                                    newRent = target.room.defaultRentPerBed.paiseToRupees().toString()
-                                },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) AppSoftBlue else AppCard
-                            ),
-                            border = BorderStroke(1.dp, if (isSelected) AppNavy else AppBorder)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text("Room ${target.room.roomNumber}", fontWeight = FontWeight.Bold, color = AppText)
-                                    Text("$vacancy free bed(s) · ${target.room.defaultRentPerBed.paiseToText()}/mo", style = MaterialTheme.typography.bodySmall, color = AppMuted)
-                                }
-                                if (isSelected) {
-                                    Text("Selected", color = AppNavy, fontWeight = FontWeight.Bold)
-                                }
+                Box {
+                    OutlinedTextField(
+                        value = if (selectedTarget != null) "Room ${selectedTarget!!.room.roomNumber}" else "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("New Room *") },
+                        placeholder = { Text("Tap to select a room…", color = AppMuted) },
+                        trailingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = "Select room", tint = AppNavy)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = AppText,
+                            unfocusedTextColor = AppText,
+                            focusedBorderColor = AppNavy,
+                            unfocusedBorderColor = AppBorder,
+                            cursorColor = AppNavy
+                        ),
+                        supportingText = {
+                            if (selectedTarget != null) {
+                                val target = selectedTarget!!
+                                val vacancy = target.room.bedCount - target.occupiedBeds
+                                Text(
+                                    "Vacancy: $vacancy free bed(s) · Default Rent: ${target.room.defaultRentPerBed.paiseToText()}",
+                                    color = AppMuted
+                                )
                             }
                         }
-                    }
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable(onClickLabel = "Select room") {
+                                focusManager.clearFocus()
+                                showRoomPicker = true
+                            }
+                    )
                 }
+            }
+
+            if (showRoomPicker) {
+                RoomPickerDialog(
+                    rooms = transferTargets,
+                    onDismiss = { showRoomPicker = false },
+                    onSelect = { target ->
+                        selectedTarget = target
+                        newRent = target.room.defaultRentPerBed.paiseToRupees().toString()
+                    }
+                )
             }
 
             if (selectedTarget != null) {
@@ -249,7 +272,7 @@ fun TransferRoomScreen(
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppNavy,
-                    contentColor = Color.White,
+                    contentColor = AppOnNavy,
                     disabledContainerColor = AppBorder,
                     disabledContentColor = AppMuted
                 )

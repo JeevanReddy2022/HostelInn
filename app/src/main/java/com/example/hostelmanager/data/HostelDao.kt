@@ -2,17 +2,16 @@ package com.example.hostelmanager.data
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HostelDao {
 
     // 1. Save a new hostel
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertHostel(hostel: Hostel)
 
     // 2. Update an existing hostel (e.g., changing the name or phone)

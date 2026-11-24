@@ -22,7 +22,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
-import com.example.hostelmanager.util.label
+import com.example.hostelmanager.util.labelDashed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.util.formatRupees
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -335,8 +336,8 @@ private fun DashboardContent(
 ) {
     val currentMonth = YearMonth.now()
     val lastMonth = currentMonth.minusMonths(1)
-    val currentMonthTitle = currentMonth.label()
-    val lastMonthTitle = lastMonth.label()
+    val currentMonthTitle = currentMonth.labelDashed()
+    val lastMonthTitle = lastMonth.labelDashed()
 
     HeroProfitCard(
         hostelName = stats.hostelName,
@@ -677,7 +678,7 @@ private fun WideMetricCard(
                     Brush.horizontalGradient(
                         listOf(
                             softAccent,
-                            Color.White
+                            AppCard
                         )
                     )
                 )

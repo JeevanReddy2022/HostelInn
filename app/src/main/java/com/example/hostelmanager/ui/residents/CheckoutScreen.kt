@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.components.DetailRow
+import com.example.hostelmanager.ui.theme.AppOnNavy
 import com.example.hostelmanager.util.paiseToText
 import com.example.hostelmanager.domain.validation.AmountRules
 import com.example.hostelmanager.domain.validation.DateRules
@@ -242,7 +243,7 @@ fun CheckoutScreen(
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppNavy,
-                    contentColor = Color.White,
+                    contentColor = AppOnNavy,
                     disabledContainerColor = AppBorder,
                     disabledContentColor = AppMuted
                 )

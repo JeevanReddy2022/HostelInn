@@ -28,7 +28,6 @@ class PaymentHistoryViewModel(
         residentRepository.getActiveResidentsByHostel(id)
     }
 
-    // Left unchanged per Constraint 4 (combined with month and person)
     val payments: StateFlow<List<PaymentWithDetails>> = combine(
         _hostelId,
         _selectedMonth,

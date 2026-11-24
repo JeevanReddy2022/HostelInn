@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.components.SectionHeader
+import com.example.hostelmanager.ui.theme.AppOnNavy
 import com.example.hostelmanager.util.paiseToRupees
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -511,7 +512,7 @@ fun AddResidentScreen(
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppNavy,
-                    contentColor = Color.White,
+                    contentColor = AppOnNavy,
                     disabledContainerColor = AppBorder,
                     disabledContentColor = AppMuted
                 ),
