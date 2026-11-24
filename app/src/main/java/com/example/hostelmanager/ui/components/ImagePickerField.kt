@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,7 +30,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -36,7 +37,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.hostelmanager.util.ImageStore
+import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
@@ -51,20 +54,26 @@ fun ImagePickerField(
 
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
     var showChooser by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
     fun savePickedImage(uri: Uri) {
         scope.launch {
-            val savedPath = ImageStore.saveImage(context, uri)
-            if (savedPath != null) {
-                val oldPath = imagePath
-                onImageCaptured(savedPath)
-                if (!oldPath.isNullOrBlank() && oldPath != savedPath) {
-                    ImageStore.deleteImage(context, oldPath)
+            isSaving = true
+            try {
+                val savedPath = ImageStore.saveImage(context, uri)
+                if (savedPath != null) {
+                    val oldPath = imagePath
+                    onImageCaptured(savedPath)
+                    if (!oldPath.isNullOrBlank() && oldPath != savedPath) {
+                        ImageStore.deleteImage(context, oldPath)
+                    }
+                } else {
+                    Toast.makeText(context, "Could not save the image", Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                Toast.makeText(context, "Could not save the image", Toast.LENGTH_SHORT).show()
+            } finally {
+                isSaving = false
             }
         }
     }
@@ -121,7 +130,7 @@ fun ImagePickerField(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showChooser = true },
+                .clickable(enabled = !isSaving) { showChooser = true },
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -132,28 +141,43 @@ fun ImagePickerField(
                     .height(160.dp),
                 contentAlignment = Alignment.Center
             ) {
-                val path = imagePath
-                if (path.isNullOrBlank()) {
+                if (isSaving) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Tap to add photo",
+                            "Saving photo…",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
-                    AsyncImage(
-                        model = File(path),
-                        contentDescription = label,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    val path = imagePath
+                    if (path.isNullOrBlank()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Tap to add photo",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(File(path))
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = label,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
         }

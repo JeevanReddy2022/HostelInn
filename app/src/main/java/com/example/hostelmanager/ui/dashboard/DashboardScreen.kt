@@ -40,7 +40,6 @@ import com.example.hostelmanager.util.formatRupees
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
-
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.ReadOnlyComposable
 
@@ -327,8 +326,9 @@ private fun ManageHostelFooter(
 /*  Dashboard content                                                  */
 /* ------------------------------------------------------------------ */
 
+// ✅ Changed from 'private' to 'internal' so HostelDashboardScreen can reuse it for Tab 0
 @Composable
-private fun DashboardContent(
+internal fun DashboardContent(
     stats: DashboardStats,
     onManageHostelClick: () -> Unit,
     footerAlpha: Float,
@@ -446,8 +446,9 @@ private fun DashboardContent(
 /*  Cards                                                              */
 /* ------------------------------------------------------------------ */
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun HeroProfitCard(
+internal fun HeroProfitCard(
     hostelName: String,
     monthTitle: String,
     profitPaise: Long,
@@ -556,8 +557,9 @@ private fun HeroProfitCard(
     }
 }
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun HeroMiniStat(
+internal fun HeroMiniStat(
     title: String,
     value: String,
     modifier: Modifier = Modifier
@@ -586,8 +588,9 @@ private fun HeroMiniStat(
     }
 }
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun SectionTitle(title: String) {
+internal fun SectionTitle(title: String) {
     Text(
         title,
         style = MaterialTheme.typography.titleLarge,
@@ -597,8 +600,9 @@ private fun SectionTitle(title: String) {
     )
 }
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun SmallMetricCard(
+internal fun SmallMetricCard(
     title: String,
     value: String,
     caption: String,
@@ -656,8 +660,9 @@ private fun SmallMetricCard(
     }
 }
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun WideMetricCard(
+internal fun WideMetricCard(
     title: String,
     value: String,
     caption: String,
@@ -710,8 +715,9 @@ private fun WideMetricCard(
     }
 }
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun OccupancyCard(
+internal fun OccupancyCard(
     activeResidents: Int,
     totalBeds: Int,
     availableBeds: Int
@@ -796,14 +802,16 @@ private fun OccupancyCard(
     }
 }
 
-private data class StatementRowData(
+// ✅ Changed from 'private' to 'internal' for reuse
+internal data class StatementRowData(
     val label: String,
     val amountPaise: Long,
     val accent: Color
 )
 
+// ✅ Changed from 'private' to 'internal' for reuse
 @Composable
-private fun StatementCard(
+internal fun StatementCard(
     rows: List<StatementRowData>,
     isProfitCard: Boolean
 ) {

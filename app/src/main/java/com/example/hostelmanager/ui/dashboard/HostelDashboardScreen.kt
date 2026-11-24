@@ -1,50 +1,38 @@
 package com.example.hostelmanager.ui.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.data.Hostel
+import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.expenses.ExpensesListScreen
+import com.example.hostelmanager.ui.hostels.HostelViewModel
 import com.example.hostelmanager.ui.payments.PaymentsListScreen
-import com.example.hostelmanager.ui.reports.ReportsScreen
 import com.example.hostelmanager.ui.residents.ResidentListScreen
 import com.example.hostelmanager.ui.rooms.RoomListScreen
+import com.example.hostelmanager.ui.theme.*
+import kotlinx.coroutines.launch
 
-// Premium Blue to Light Green Gradient
-private val GradientBlue = Color(0xFF1E40AF) // Deep Royal Blue
-private val GradientLightGreen = Color(0xFF34D399) // Fresh Mint/Emerald Green
-private val HeaderFooterGradient = Brush.horizontalGradient(
-    colors = listOf(GradientBlue, GradientLightGreen)
-)
+private val GradientBlue = Color(0xFF1E40AF)
+private val GradientLightGreen = Color(0xFF34D399)
+private val HeaderFooterGradient = Brush.horizontalGradient(colors = listOf(GradientBlue, GradientLightGreen))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,123 +46,246 @@ fun HostelDashboardScreen(
     onPastResidentsClick: () -> Unit,
     onRecordPaymentClick: (String) -> Unit,
     onPaymentHistoryClick: () -> Unit,
-    onAddExpenseClick: () -> Unit
+    onAddExpenseClick: () -> Unit,
+    onReportsClick: () -> Unit, // ✅ New
+    onHostelSwitch: (String) -> Unit,
+    onAllHostelsClick: () -> Unit,
+    hostelViewModel: HostelViewModel = appViewModel()
 ) {
+    // ✅ Dashboard is now Tab 0
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-
-    val tabs = listOf("Rooms", "Residents", "Payments", "Expenses", "Reports")
+    val tabs = listOf("Dashboard", "Rooms", "Residents", "Payments", "Expenses")
     val icons = listOf(
-        Icons.Default.Home,
-        Icons.Default.People,
-        Icons.Default.Payments,
-        Icons.Default.Receipt,
-        Icons.Default.BarChart
+        Icons.Default.Home,          // Dashboard
+        Icons.Default.Apartment,     // Rooms
+        Icons.Default.People,        // Residents
+        Icons.Default.Payments,      // Payments
+        Icons.Default.Receipt        // Expenses
     )
 
-    Scaffold(
-        topBar = {
-            // Gradient Header
-            Box(modifier = Modifier.background(HeaderFooterGradient)) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = tabs[selectedTab],
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val hostels by hostelViewModel.hostels.collectAsStateWithLifecycle()
+    val currentHostel = hostels.find { it.id == hostelId }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(modifier = Modifier.width(280.dp)) {
+                DrawerContent(
+                    currentHostel = currentHostel,
+                    hostels = hostels,
+                    onHostelClick = { newHostelId ->
+                        scope.launch { drawerState.close() }
+                        onHostelSwitch(newHostelId)
                     },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                        }
+                    onArchivedRoomsClick = {
+                        scope.launch { drawerState.close() }
+                        onArchivedRoomsClick()
                     },
-                    actions = {
-                        if (selectedTab == 0) {
-                            IconButton(onClick = onArchivedRoomsClick) {
-                                Icon(Icons.Default.Archive, contentDescription = "Archived Rooms", tint = Color.White)
-                            }
-                        } else if (selectedTab == 1) {
-                            IconButton(onClick = onPastResidentsClick) {
-                                Icon(Icons.Default.Archive, contentDescription = "Past Residents", tint = Color.White)
-                            }
-                        }
+                    onPastResidentsClick = {
+                        scope.launch { drawerState.close() }
+                        onPastResidentsClick()
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent, // Allows gradient to show through
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White,
-                        actionIconContentColor = Color.White
-                    )
+                    onReportsClick = { // ✅ Reports in drawer
+                        scope.launch { drawerState.close() }
+                        onReportsClick()
+                    },
+                    onAllHostelsClick = {
+                        scope.launch { drawerState.close() }
+                        onAllHostelsClick()
+                    }
                 )
             }
-        },
-        bottomBar = {
-            // Gradient Footer
-            Box(modifier = Modifier.background(HeaderFooterGradient)) {
-                NavigationBar(
-                    containerColor = Color.Transparent, // Allows gradient to show through
-                    contentColor = Color.White,
-                    tonalElevation = 0.dp // Remove shadow to blend perfectly with gradient
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        NavigationBarItem(
-                            icon = {
-                                Icon(
-                                    icons[index],
-                                    contentDescription = title,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            },
-                            label = {
-                                Text(
-                                    title,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                                )
-                            },
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
-                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
-                                selectedTextColor = Color.White,
-                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
-                                indicatorColor = Color.White.copy(alpha = 0.2f) // Subtle white pill for selected tab
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                Box(modifier = Modifier.background(HeaderFooterGradient)) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = tabs[selectedTab],
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = Color.White,
+                            navigationIconContentColor = Color.White
                         )
+                    )
+                }
+            },
+            bottomBar = {
+                Box(modifier = Modifier.background(HeaderFooterGradient)) {
+                    NavigationBar(
+                        containerColor = Color.Transparent,
+                        contentColor = Color.White,
+                        tonalElevation = 0.dp
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            NavigationBarItem(
+                                icon = { Icon(icons[index], contentDescription = title, modifier = Modifier.size(24.dp)) },
+                                label = {
+                                    Text(
+                                        title,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.White,
+                                    unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                    selectedTextColor = Color.White,
+                                    unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                    indicatorColor = Color.White.copy(alpha = 0.2f)
+                                )
+                            )
+                        }
                     }
                 }
             }
+        ) { padding ->
+            val modifierWithPadding = Modifier.padding(padding)
+
+            key(hostelId) {
+                when (selectedTab) {
+                    0 -> DashboardTabContent(hostelId = hostelId, modifier = modifierWithPadding) // ✅ Tab 0 is Dashboard
+                    1 -> RoomListScreen(hostelId = hostelId, onRoomClick = onRoomClick, modifier = modifierWithPadding)
+                    2 -> ResidentListScreen(hostelId = hostelId, onAddClick = onAddResidentClick, onResidentClick = onResidentClick, modifier = modifierWithPadding)
+                    3 -> PaymentsListScreen(hostelId = hostelId, onRecordPaymentClick = onRecordPaymentClick, onPaymentHistoryClick = onPaymentHistoryClick, modifier = modifierWithPadding)
+                    4 -> ExpensesListScreen(hostelId = hostelId, onAddExpenseClick = onAddExpenseClick, modifier = modifierWithPadding)
+                }
+            }
         }
-    ) { padding ->
-        when (selectedTab) {
-            0 -> RoomListScreen(
-                hostelId = hostelId,
-                onRoomClick = { roomId -> onRoomClick(roomId) },
-                modifier = Modifier.padding(padding)
+    }
+}
+
+// ✅ Reuses the stats UI from DashboardScreen without the outer Scaffold
+@Composable
+private fun DashboardTabContent(hostelId: String, modifier: Modifier = Modifier, viewModel: DashboardViewModel = appViewModel()) {
+    SideEffect { viewModel.setHostelId(hostelId) }
+    val stats by viewModel.stats.collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        if (stats == null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                border = androidx.compose.foundation.BorderStroke(1.dp, AppBorder)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Loading dashboard...", style = MaterialTheme.typography.bodyLarge, color = AppMuted)
+                }
+            }
+        } else {
+            // Reuses the internal DashboardContent from DashboardScreen.kt
+            DashboardContent(
+                stats = stats!!,
+                onManageHostelClick = {}, // No-op since we are already in management view
+                footerAlpha = 0f, // Hide the floating footer button
+                onFooterHeightChanged = {}
             )
-            1 -> ResidentListScreen(
-                hostelId = hostelId,
-                onAddClick = { onAddResidentClick() },
-                onResidentClick = { personId -> onResidentClick(personId) },
-                modifier = Modifier.padding(padding)
-            )
-            2 -> PaymentsListScreen(
-                hostelId = hostelId,
-                onRecordPaymentClick = { personId -> onRecordPaymentClick(personId) },
-                onPaymentHistoryClick = { onPaymentHistoryClick() },
-                modifier = Modifier.padding(padding)
-            )
-            3 -> ExpensesListScreen(
-                hostelId = hostelId,
-                onAddExpenseClick = { onAddExpenseClick() },
-                modifier = Modifier.padding(padding)
-            )
-            4 -> ReportsScreen(
-                hostelId = hostelId,
-                modifier = Modifier.padding(padding)
-            )
+        }
+    }
+}
+
+@Composable
+private fun DrawerContent(
+    currentHostel: Hostel?,
+    hostels: List<Hostel>,
+    onHostelClick: (String) -> Unit,
+    onArchivedRoomsClick: () -> Unit,
+    onPastResidentsClick: () -> Unit,
+    onReportsClick: () -> Unit, // ✅ New
+    onAllHostelsClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(AppBackground).verticalScroll(rememberScrollState())
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().background(HeaderFooterGradient).padding(20.dp)
+        ) {
+            Column {
+                Text(text = currentHostel?.name ?: "Hostel", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                if (currentHostel?.address?.isNotBlank() == true) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = currentHostel.address, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        DrawerMenuItem(icon = Icons.Default.Apartment, title = "All Hostels", onClick = onAllHostelsClick)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
+
+        Text(text = "Switch Hostel", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        hostels.forEach { hostel ->
+            DrawerHostelItem(hostel = hostel, isSelected = hostel.id == currentHostel?.id, onClick = { if (hostel.id != currentHostel?.id) onHostelClick(hostel.id) })
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
+
+        Text(text = "Analytics & Archives", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+
+        // ✅ Reports moved here
+        DrawerMenuItem(icon = Icons.Default.BarChart, title = "Reports", onClick = onReportsClick)
+        DrawerMenuItem(icon = Icons.Default.Archive, title = "Archived Rooms", onClick = onArchivedRoomsClick)
+        DrawerMenuItem(icon = Icons.Default.People, title = "Past Residents", onClick = onPastResidentsClick)
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun DrawerMenuItem(icon: ImageVector, title: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = AppNavy, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = AppText, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun DrawerHostelItem(hostel: Hostel, isSelected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp)
+            .then(if (isSelected) Modifier.background(AppSoftBlue.copy(alpha = 0.5f)) else Modifier),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(if (isSelected) AppNavy else AppCard), contentAlignment = Alignment.Center) {
+            Icon(imageVector = Icons.Default.Apartment, contentDescription = null, tint = if (isSelected) Color.White else AppNavy, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = hostel.name, style = MaterialTheme.typography.bodyLarge, color = AppText, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            if (hostel.address.isNotBlank()) {
+                Text(text = hostel.address, style = MaterialTheme.typography.bodySmall, color = AppMuted, maxLines = 1)
+            }
+        }
+        if (isSelected) {
+            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(AppNavy))
         }
     }
 }

@@ -35,6 +35,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,10 +64,7 @@ fun PastResidentsScreen(
     onPastResidentClick: (String) -> Unit, // NEW: Callback for tapping the card
     viewModel: PastResidentsViewModel = appViewModel()
 ) {
-    LaunchedEffect(hostelId) {
-        viewModel.setHostelId(hostelId)
-    }
-
+    SideEffect { viewModel.setHostelId(hostelId) }
     val pastResidents by viewModel.pastResidents.collectAsStateWithLifecycle()
 
     Scaffold(

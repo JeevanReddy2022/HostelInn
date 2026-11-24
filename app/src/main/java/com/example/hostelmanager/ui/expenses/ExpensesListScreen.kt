@@ -55,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -114,8 +115,7 @@ fun ExpensesListScreen(
     modifier: Modifier = Modifier,
     viewModel: ExpensesViewModel = appViewModel()
 ) {
-    LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
-
+    SideEffect { viewModel.setHostelId(hostelId) }
     val allExpenses by viewModel.expenses.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
 
@@ -584,7 +584,11 @@ fun ExpenseCard(
             ) {
                 if (hasReceipt) {
                     AsyncImage(
-                        model = File(expense.receiptImagePath!!),
+                        model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                            .data(File(expense.receiptImagePath!!))
+                            .size(192)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Receipt",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

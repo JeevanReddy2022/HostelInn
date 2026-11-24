@@ -174,7 +174,10 @@ fun ResidentDetailsScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         AsyncImage(
-                            model = File(currentPerson.profilePhotoPath),
+                            model = coil.request.ImageRequest.Builder(LocalContext.current)
+                                .data(File(currentPerson.profilePhotoPath))
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Person photo",
                             modifier = Modifier.fillMaxWidth().height(220.dp),
                             contentScale = ContentScale.Crop
@@ -409,7 +412,10 @@ private fun DocumentImage(label: String, path: String?) {
                 }
             } else {
                 AsyncImage(
-                    model = File(path),
+                    model = coil.request.ImageRequest.Builder(LocalContext.current)
+                        .data(File(path))
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Govt ID $label",
                     modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Fit

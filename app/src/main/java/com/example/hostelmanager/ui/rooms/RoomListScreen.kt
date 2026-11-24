@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
-import com.example.hostelmanager.ui.theme.AppOnNavy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,8 +95,7 @@ fun RoomListScreen(
     modifier: Modifier = Modifier,
     viewModel: RoomViewModel = appViewModel()
 ) {
-    LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
-
+    SideEffect { viewModel.setHostelId(hostelId) }
     val allRooms by viewModel.roomsWithOccupancy.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val roomError by viewModel.roomExistsError.collectAsStateWithLifecycle()
@@ -160,7 +159,7 @@ fun RoomListScreen(
             },
             shape = RoundedCornerShape(18.dp),
             containerColor = AppNavy,
-            contentColor = AppOnNavy,
+            contentColor = Color.White,
             elevation = FloatingActionButtonDefaults.elevation(6.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)

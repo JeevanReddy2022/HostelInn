@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -100,8 +101,7 @@ fun ResidentListScreen(
     modifier: Modifier = Modifier,
     viewModel: ResidentListViewModel = appViewModel()
 ) {
-    LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
-
+    SideEffect { viewModel.setHostelId(hostelId) }
     val allResidents by viewModel.residents.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 

@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.util.formatCycle
@@ -83,17 +84,16 @@ fun PaymentsListScreen(
     modifier: Modifier = Modifier,
     viewModel: PaymentsViewModel = appViewModel()
 ) {
-    LaunchedEffect(hostelId) {
-        viewModel.setHostelId(hostelId)
-    }
-
+    SideEffect { viewModel.setHostelId(hostelId) }
     val residents by viewModel.residents.collectAsStateWithLifecycle()
     var sortOption by remember { mutableStateOf(SortOption.NAME) }
 
-    val sortedResidents = when (sortOption) {
-        SortOption.NAME -> residents.sortedBy { it.name }
-        SortOption.ROOM -> residents.sortedBy { it.roomNumber }
-        SortOption.AMOUNT -> residents.sortedByDescending { it.monthlyRent }
+    val sortedResidents = remember(residents, sortOption) {
+        when (sortOption) {
+            SortOption.NAME -> residents.sortedBy { it.name }
+            SortOption.ROOM -> residents.sortedBy { it.roomNumber }
+            SortOption.AMOUNT -> residents.sortedByDescending { it.monthlyRent }
+        }
     }
 
     Box(
