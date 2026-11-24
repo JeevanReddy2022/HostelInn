@@ -48,6 +48,7 @@ import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppSoftGreen
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.paiseToText
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
@@ -166,7 +167,7 @@ fun ReportsScreen(
                     )
                 }
                 Text(
-                    if (isProfit) "₹${report.netProfitPaise / 100}" else "-₹${Math.abs(report.netProfitPaise) / 100}",
+                    report.netProfitPaise.paiseToText(),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (isProfit) AppGreen else AppRed
@@ -207,7 +208,7 @@ fun ReportsScreen(
                                 color = AppText
                             )
                             Text(
-                                "₹${item.totalPaise / 100}",
+                                item.totalPaise.paiseToText(),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = AppRed
@@ -289,7 +290,7 @@ private fun SummaryCard(
                 )
             }
             Text(
-                "₹${amount / 100}",
+                amount.paiseToText(),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = amountColor

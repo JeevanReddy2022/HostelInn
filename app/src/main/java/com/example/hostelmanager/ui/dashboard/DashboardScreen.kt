@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.util.label
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -334,8 +335,8 @@ private fun DashboardContent(
 ) {
     val currentMonth = YearMonth.now()
     val lastMonth = currentMonth.minusMonths(1)
-    val currentMonthTitle = formatMonthTitle(currentMonth)
-    val lastMonthTitle = formatMonthTitle(lastMonth)
+    val currentMonthTitle = currentMonth.label()
+    val lastMonthTitle = lastMonth.label()
 
     HeroProfitCard(
         hostelName = stats.hostelName,
@@ -887,13 +888,4 @@ private fun StatementCard(
             }
         }
     }
-}
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-private fun formatMonthTitle(yearMonth: YearMonth): String {
-    val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-    return "$monthName - ${yearMonth.year}"
 }

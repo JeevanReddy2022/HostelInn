@@ -50,6 +50,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.components.DetailRow
+import com.example.hostelmanager.util.paiseToText
 import com.example.hostelmanager.domain.validation.AmountRules
 import com.example.hostelmanager.domain.validation.DateRules
 import com.example.hostelmanager.ui.components.AppDateField
@@ -147,9 +149,9 @@ fun CheckoutScreen(
                     Text("Current Stay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppNavy)
                     Spacer(Modifier.height(10.dp))
                     DetailRow("Room", currentRoom?.roomNumber ?: "—")
-                    DetailRow("Monthly Rent", "₹${(activeStay?.monthlyRent ?: 0L).paiseToRupees()}")
+                    DetailRow("Monthly Rent", (activeStay?.monthlyRent ?: 0L).paiseToText())
                     DetailRow("Joined", activeStay?.joinDate ?: "—")
-                    DetailRow("Deposit held", "₹$depositRupees")
+                    DetailRow("Deposit held", depositPaise.paiseToText())
                 }
             }
 
@@ -167,7 +169,7 @@ fun CheckoutScreen(
             ValidatedTextField(
                 value = refundRupees,
                 onValueChange = { input -> refundRupees = input.filter { it.isDigit() } },
-                label = "Refund Deposit Amount (₹) - Max ₹$depositRupees",
+                label = "Refund Deposit Amount (₹) - Max ${depositPaise.paiseToText()}",
                 error = refundAmountError,
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Next,
@@ -248,19 +250,6 @@ fun CheckoutScreen(
                 Text("Confirm Check-out", fontWeight = FontWeight.Bold)
             }
         }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = AppMuted, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = AppText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

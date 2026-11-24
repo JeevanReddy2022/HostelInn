@@ -7,6 +7,7 @@ import com.example.hostelmanager.data.RoomEntity
 import com.example.hostelmanager.data.Stay
 import com.example.hostelmanager.data.repository.ResidentRepository
 import com.example.hostelmanager.data.repository.RoomRepository
+import com.example.hostelmanager.util.paiseToText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -69,7 +70,7 @@ class CheckoutViewModel(
         }
 
         if (refundPaise > stay.depositCollected) {
-            _checkoutError.value = "Refund cannot be more than the deposit held (₹${stay.depositCollected / 100})."
+            _checkoutError.value = "Refund cannot be more than the deposit held (${stay.depositCollected.paiseToText()})."
             return false
         }
 

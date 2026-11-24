@@ -52,6 +52,10 @@ import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
 import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.formatMonth
+import com.example.hostelmanager.util.paiseToText
+import com.example.hostelmanager.util.toIsoMonth
+import java.time.YearMonth
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -83,7 +87,7 @@ fun PaymentHistoryScreen(
 
     val months = remember {
         (0 until 12).map { offset ->
-            LocalDate.now().minusMonths(offset.toLong()).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"))
+            YearMonth.now().minusMonths(offset.toLong()).toIsoMonth()
         }
     }
 
@@ -260,7 +264,7 @@ fun PaymentHistoryScreen(
             title = { Text("Delete Payment?", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "Delete payment of ₹${p.amountPaise / 100} from ${paymentWithDetails.personName} on ${p.paymentDate}? " +
+                    "Delete payment of ${p.amountPaise.paiseToText()} from ${paymentWithDetails.personName} on ${p.paymentDate}? " +
                             "This can't be undone."
                 )
             },
@@ -336,7 +340,7 @@ fun PaymentCard(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            "₹${paymentWithDetails.monthlyRent / 100}/mo",
+                            "${paymentWithDetails.monthlyRent.paiseToText()}/mo",
                             style = MaterialTheme.typography.bodySmall,
                             color = AppNavy,
                             fontWeight = FontWeight.SemiBold
@@ -389,7 +393,7 @@ fun PaymentCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "₹${p.amountPaise / 100}",
+                    p.amountPaise.paiseToText(),
                     style = MaterialTheme.typography.titleLarge,
                     color = AppNavy,
                     fontWeight = FontWeight.Bold
@@ -405,13 +409,4 @@ fun PaymentCard(
             }
         }
     }
-}
-
-private fun formatMonth(yyyyMm: String): String {
-    val parts = yyyyMm.split("-")
-    if (parts.size != 2) return yyyyMm
-    val year = parts[0]
-    val monthNum = parts[1].toIntOrNull() ?: return yyyyMm
-    val monthName = java.time.Month.of(monthNum).getDisplayName(TextStyle.FULL, Locale.getDefault())
-    return "$monthName $year"
 }

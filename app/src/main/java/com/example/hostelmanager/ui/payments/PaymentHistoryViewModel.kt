@@ -1,11 +1,11 @@
 package com.example.hostelmanager.ui.payments
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hostelmanager.data.PaymentWithDetails
 import com.example.hostelmanager.data.ResidentWithRoom
 import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.ui.BaseHostelViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,17 +19,16 @@ import kotlinx.coroutines.launch
 class PaymentHistoryViewModel(
     private val paymentRepository: PaymentRepository,
     private val residentRepository: ResidentRepository
-) : ViewModel() {
+) : BaseHostelViewModel() {
 
-    private val _hostelId = MutableStateFlow("")
     private val _selectedMonth = MutableStateFlow<String?>(null)
     private val _selectedPersonId = MutableStateFlow<String?>(null)
 
-    val residents: StateFlow<List<ResidentWithRoom>> = _hostelId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(emptyList())
-        else residentRepository.getActiveResidentsByHostel(id)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val residents: StateFlow<List<ResidentWithRoom>> = hostelFlow(emptyList<ResidentWithRoom>()) { id ->
+        residentRepository.getActiveResidentsByHostel(id)
+    }
 
+    // Left unchanged per Constraint 4 (combined with month and person)
     val payments: StateFlow<List<PaymentWithDetails>> = combine(
         _hostelId,
         _selectedMonth,
@@ -50,10 +49,6 @@ class PaymentHistoryViewModel(
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun setHostelId(id: String) {
-        _hostelId.value = id
-    }
 
     fun setMonth(month: String?) {
         _selectedMonth.value = month

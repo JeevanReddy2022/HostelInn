@@ -39,6 +39,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.util.formatCycle
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.paiseToText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -308,7 +311,7 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    "₹${resident.monthlyRent / 100}",
+                    resident.monthlyRent.paiseToText(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = AppNavy
@@ -340,15 +343,15 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
     }
 
     if (showMessageDialog) {
-        val rentAmount = resident.monthlyRent / 100
+        val rentText = resident.monthlyRent.paiseToText()
 
         MessageChoiceDialog(
             personName = resident.name,
             phone = resident.phone,
-            rentAmount = rentAmount,
+            rentAmount = resident.monthlyRent.paiseToRupees(),
             onDismiss = { showMessageDialog = false },
             onWhatsAppClick = {
-                val message = "Hi ${resident.name},\nPlease pay the rent ₹$rentAmount for ${formatCycle(resident.cycleStart, resident.cycleEnd)}.\nThanks!"
+                val message = "Hi ${resident.name},\nPlease pay the rent $rentText for ${formatCycle(resident.cycleStart, resident.cycleEnd)}.\nThanks!"
                 val whatsappNumber = "91${resident.phone}"
                 val encodedMessage = URLEncoder.encode(message, "UTF-8")
                 val whatsappUri = Uri.parse("https://wa.me/$whatsappNumber?text=$encodedMessage")
@@ -361,7 +364,7 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
                 showMessageDialog = false
             },
             onSmsClick = {
-                val message = "Hi ${resident.name},\nPlease pay the rent ₹$rentAmount for ${formatCycle(resident.cycleStart, resident.cycleEnd)}.\nThanks!"
+                val message = "Hi ${resident.name},\nPlease pay the rent $rentText for ${formatCycle(resident.cycleStart, resident.cycleEnd)}.\nThanks!"
                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${resident.phone}"))
                 intent.putExtra("sms_body", message)
                 try {
@@ -373,10 +376,4 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
             }
         )
     }
-}
-
-private fun formatCycle(start: String, end: String): String {
-    val startDate = LocalDate.parse(start, DateTimeFormatter.ISO_LOCAL_DATE)
-    val endDate = LocalDate.parse(end, DateTimeFormatter.ISO_LOCAL_DATE)
-    return "${startDate.dayOfMonth} ${startDate.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} – ${endDate.dayOfMonth} ${endDate.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())}"
 }

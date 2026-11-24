@@ -18,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.hostelmanager.data.RoomEntity
-import com.example.hostelmanager.domain.validation.AmountRules
+import com.example.hostelmanager.domain.validation.RoomRules
 import com.example.hostelmanager.ui.components.ValidatedTextField
 import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.ui.theme.AppGreen
@@ -28,22 +28,27 @@ import com.example.hostelmanager.util.paiseToRupees
 import com.example.hostelmanager.util.rupeesToPaise
 
 @Composable
-fun EditRoomDialog(
-    room: RoomEntity,
-    occupiedBeds: Int,
+fun RoomFormDialog(
+    room: RoomEntity? = null,
+    occupiedBeds: Int = 0,
+    errorMessage: String? = null,
+    onErrorCleared: () -> Unit = {},
     onDismiss: () -> Unit,
-    onConfirm: (roomNumber: String, floor: Int, bedCount: Int, rentPerBedPaise: Long) -> Unit
+    onConfirm: (roomNumber: String, floor: Int, bedCount: Int, rentPaise: Long) -> Unit
 ) {
-    var roomNumber by remember { mutableStateOf(room.roomNumber) }
-    var floor by remember { mutableStateOf(room.floor.toString()) }
-    var beds by remember { mutableStateOf(room.bedCount.toString()) }
-    var rent by remember { mutableStateOf(room.defaultRentPerBed.paiseToRupees().toString()) }
+    val isNewRoom = room == null
 
-    val bedsInt = beds.toIntOrNull() ?: 0
-    val isBedsNumberValid = bedsInt >= 1
-    val isBedsEnough = bedsInt >= occupiedBeds
-    val rentErr = AmountRules.validateAmount(rent, "Rent per bed")
-    val isFormValid = roomNumber.isNotBlank() && isBedsNumberValid && isBedsEnough && rentErr == null
+    var roomNumber by remember { mutableStateOf(room?.roomNumber ?: "") }
+    var floor by remember { mutableStateOf(room?.floor?.toString() ?: "1") }
+    var beds by remember { mutableStateOf(room?.bedCount?.toString() ?: "1") }
+    var rent by remember { mutableStateOf(room?.defaultRentPerBed?.paiseToRupees()?.toString() ?: "") }
+
+    val roomNumErr = errorMessage ?: RoomRules.roomNumberError(roomNumber, isNewRoom)
+    val floorErr = RoomRules.floorError(floor)
+    val bedsErr = RoomRules.bedsError(beds, occupiedBeds)
+    val rentErr = RoomRules.rentError(rent, isNewRoom)
+
+    val isFormValid = roomNumber.isNotBlank() && roomNumErr == null && floorErr == null && bedsErr == null && rentErr == null && rent.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -53,7 +58,7 @@ fun EditRoomDialog(
         textContentColor = AppText,
         title = {
             Text(
-                "Edit Room",
+                if (isNewRoom) "Add Room" else "Edit Room",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -62,30 +67,29 @@ fun EditRoomDialog(
             Column {
                 ValidatedTextField(
                     value = roomNumber,
-                    onValueChange = { roomNumber = it },
+                    onValueChange = {
+                        roomNumber = it
+                        onErrorCleared()
+                    },
                     label = "Room Number *",
-                    error = if (roomNumber.isBlank()) "Room number is required" else null
+                    error = roomNumErr
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ValidatedTextField(
                     value = floor,
-                    onValueChange = { input -> floor = input.filter { it.isDigit() } },
+                    onValueChange = { input -> floor = input.filter { it.isDigit() }.take(3) },
                     label = "Floor",
-                    error = if (floor.isBlank()) "Floor is required" else null,
+                    error = floorErr,
                     keyboardType = KeyboardType.Number
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ValidatedTextField(
                     value = beds,
-                    onValueChange = { input -> beds = input.filter { it.isDigit() } },
+                    onValueChange = { input -> beds = input.filter { it.isDigit() }.take(3) },
                     label = "Number of Beds *",
-                    error = when {
-                        !isBedsNumberValid -> "Must be at least 1"
-                        !isBedsEnough -> "$occupiedBeds resident(s) live here. Beds cannot be below $occupiedBeds."
-                        else -> null
-                    },
+                    error = bedsErr,
                     keyboardType = KeyboardType.Number
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -102,16 +106,17 @@ fun EditRoomDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirm(
-                        roomNumber.trim(),
-                        floor.toIntOrNull() ?: 0,
-                        bedsInt,
-                        rent.rupeesToPaise()
-                    )
+                    val fInt = floor.toIntOrNull() ?: 0
+                    val bInt = beds.toIntOrNull() ?: 1
+                    onConfirm(roomNumber.trim(), fInt, bInt, rent.rupeesToPaise())
                 },
                 enabled = isFormValid
             ) {
-                Text("Save", color = AppGreen, fontWeight = FontWeight.Bold)
+                Text(
+                    if (isNewRoom) "Add" else "Save",
+                    color = AppGreen,
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {

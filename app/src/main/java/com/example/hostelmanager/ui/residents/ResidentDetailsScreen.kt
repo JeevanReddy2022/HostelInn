@@ -49,6 +49,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.components.DetailRow
+import com.example.hostelmanager.ui.components.SectionHeader
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.paiseToText
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -222,9 +226,9 @@ fun ResidentDetailsScreen(
                         }
                     } else {
                         DetailRow("Room", room?.roomNumber ?: "—")
-                        DetailRow("Monthly Rent", "₹${stay.monthlyRent / 100}")
+                        DetailRow("Monthly Rent", stay.monthlyRent.paiseToText())
                         DetailRow("Join Date", stay.joinDate)
-                        DetailRow("Deposit", "₹${stay.depositCollected / 100}")
+                        DetailRow("Deposit", stay.depositCollected.paiseToText())
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -308,7 +312,7 @@ fun ResidentDetailsScreen(
     val dialogPerson = person
     val dialogStay = activeStay
     if (showMessageDialog && dialogPerson != null && dialogStay != null) {
-        val rentAmount = dialogStay.monthlyRent / 100
+        val rentAmount = dialogStay.monthlyRent.paiseToRupees()
         MessageChoiceDialog(
             personName = dialogPerson.name,
             phone = dialogPerson.phone,
@@ -316,7 +320,8 @@ fun ResidentDetailsScreen(
             onDismiss = { showMessageDialog = false },
             onWhatsAppClick = {
                 val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                val message = "Hi ${dialogPerson.name},\nPlease pay the rent ₹$rentAmount for $monthName.\nThanks!"
+                val rentText = dialogStay.monthlyRent.paiseToText()
+                val message = "Hi ${dialogPerson.name},\nPlease pay the rent $rentText for $monthName.\nThanks!"
                 val whatsappNumber = "91${dialogPerson.phone}"
                 val encodedMessage = URLEncoder.encode(message, "UTF-8")
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsappNumber?text=$encodedMessage"))
@@ -329,7 +334,8 @@ fun ResidentDetailsScreen(
             },
             onSmsClick = {
                 val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                val message = "Hi ${dialogPerson.name},\nPlease pay the rent ₹$rentAmount for $monthName.\nThanks!"
+                val rentText = dialogStay.monthlyRent.paiseToText()
+                val message = "Hi ${dialogPerson.name},\nPlease pay the rent $rentText for $monthName.\nThanks!"
                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${dialogPerson.phone}"))
                 intent.putExtra("sms_body", message)
                 try {
@@ -352,7 +358,7 @@ fun ResidentDetailsScreen(
             textContentColor = AppMuted,
             title = { Text("Delete Payment?", fontWeight = FontWeight.Bold) },
             text = {
-                Text("Delete payment of ₹${payment.amountPaise / 100} from ${payment.paymentDate}? This can't be undone.")
+                Text("Delete payment of ${payment.amountPaise.paiseToText()} from ${payment.paymentDate}? This can't be undone.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -379,32 +385,6 @@ private fun PremiumCard(content: @Composable () -> Unit) {
         Column(modifier = Modifier.padding(18.dp)) {
             content()
         }
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Column(modifier = Modifier.padding(top = 4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = AppText, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .width(32.dp)
-                .height(2.dp)
-                .background(AppNavy)
-        )
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = AppMuted, modifier = Modifier.weight(0.4f))
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = AppText, fontWeight = FontWeight.Medium, modifier = Modifier.weight(0.6f))
     }
 }
 
@@ -472,7 +452,7 @@ private fun PaymentHistoryCard(payment: Payment, onDeleteClick: () -> Unit) {
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Text("₹${payment.amountPaise / 100}", style = MaterialTheme.typography.titleLarge, color = AppNavy, fontWeight = FontWeight.Bold)
+                Text(payment.amountPaise.paiseToText(), style = MaterialTheme.typography.titleLarge, color = AppNavy, fontWeight = FontWeight.Bold)
                 IconButton(onClick = onDeleteClick) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = AppRed, modifier = Modifier.size(20.dp))
                 }

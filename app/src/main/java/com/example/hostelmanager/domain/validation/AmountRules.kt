@@ -1,5 +1,6 @@
 package com.example.hostelmanager.domain.validation
 
+import com.example.hostelmanager.util.paiseToRupees
 import com.example.hostelmanager.util.rupeesToPaiseOrNull
 
 object AmountRules {
@@ -12,7 +13,7 @@ object AmountRules {
         val clean = rawRupees.trim()
         if (clean.isEmpty()) return "$label is required."
         val paise = clean.rupeesToPaiseOrNull() ?: return "Please enter a valid $label."
-        val rupees = paise / 100
+        val rupees = paise.paiseToRupees()
         if (rupees < minRupees) {
             return "$label must be at least ₹$minRupees."
         }

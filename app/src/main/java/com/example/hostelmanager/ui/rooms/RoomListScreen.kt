@@ -172,7 +172,7 @@ fun RoomListScreen(
     /* ---------------- Add room ---------------- */
 
     if (showAddDialog) {
-        AddRoomDialog(
+        RoomFormDialog(
             onDismiss = {
                 viewModel.clearRoomError()
                 showAddDialog = false

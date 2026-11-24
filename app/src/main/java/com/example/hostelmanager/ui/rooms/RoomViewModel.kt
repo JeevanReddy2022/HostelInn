@@ -1,16 +1,11 @@
 package com.example.hostelmanager.ui.rooms
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.hostelmanager.data.RoomEntity
 import com.example.hostelmanager.data.RoomWithOccupancy
 import com.example.hostelmanager.data.repository.RoomRepository
+import com.example.hostelmanager.ui.BaseHostelViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
 
 enum class RoomAvailability(val label: String, val caption: String) {
     ALL("All rooms", "Show every room in this hostel"),
@@ -113,18 +108,11 @@ internal fun summarizeRooms(rooms: List<RoomWithOccupancy>): RoomSummary = RoomS
 
 class RoomViewModel(
     private val roomRepository: RoomRepository
-) : ViewModel() {
+) : BaseHostelViewModel() {
 
-    private val _hostelId = MutableStateFlow("")
-
-    val roomsWithOccupancy: StateFlow<List<RoomWithOccupancy>> = _hostelId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(emptyList())
-        else roomRepository.getRoomsWithOccupancy(id)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    val roomsWithOccupancy: StateFlow<List<RoomWithOccupancy>> = hostelFlow(emptyList<RoomWithOccupancy>()) { id ->
+        roomRepository.getRoomsWithOccupancy(id)
+    }
 
     private val _filters = MutableStateFlow(RoomFilters())
     val filters: StateFlow<RoomFilters> = _filters
@@ -132,11 +120,8 @@ class RoomViewModel(
     private val _roomExistsError = MutableStateFlow<String?>(null)
     val roomExistsError: StateFlow<String?> = _roomExistsError
 
-    fun setHostelId(id: String) {
-        if (_hostelId.value != id) {
-            _hostelId.value = id
-            _filters.value = RoomFilters()
-        }
+    override fun onHostelChanged() {
+        _filters.value = RoomFilters()
     }
 
     fun setQuery(value: String) {

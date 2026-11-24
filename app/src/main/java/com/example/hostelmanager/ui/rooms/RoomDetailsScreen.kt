@@ -55,6 +55,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.paiseToText
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -313,7 +315,7 @@ fun RoomDetailsScreen(
 
     // 1. EDIT DIALOG
     if (showEditDialog && room != null) {
-        EditRoomDialog(
+        RoomFormDialog(
             room = room!!,
             occupiedBeds = residents.size,
             onDismiss = { showEditDialog = false },
@@ -336,7 +338,7 @@ fun RoomDetailsScreen(
             title = { Text("Update residents' rent?", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "Room rent changed from ₹${prompt.oldRentPaise / 100} to ₹${prompt.newRentPaise / 100}.\n\n" +
+                    "Room rent changed from ${prompt.oldRentPaise.paiseToText()} to ${prompt.newRentPaise.paiseToText()}.\n\n" +
                             "Update the monthly rent for all ${prompt.residentCount} resident(s) in this room?\n\n" +
                             "Anyone on a custom agreed rent will also be changed."
                 )
@@ -475,7 +477,7 @@ private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -
             Column(modifier = Modifier.weight(1f)) {
                 Text(person.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = AppText)
                 Text("📞 ${person.phone}", style = MaterialTheme.typography.bodyMedium, color = AppMuted)
-                Text("💰 Rent: ₹${residentWithRoom.monthlyRent / 100}", style = MaterialTheme.typography.bodySmall, color = AppNavy, fontWeight = FontWeight.Medium)
+                Text("💰 Rent: ${residentWithRoom.monthlyRent.paiseToText()}", style = MaterialTheme.typography.bodySmall, color = AppNavy, fontWeight = FontWeight.Medium)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -497,7 +499,8 @@ private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -
     }
 
     if (showMessageDialog) {
-        val rentAmount = residentWithRoom.monthlyRent / 100
+        val rentAmount = residentWithRoom.monthlyRent.paiseToRupees()
+        val rentText = residentWithRoom.monthlyRent.paiseToText()
         // MessageChoiceDialog is the shared one from ui.residents (WhatsApp/SMS buttons with logos)
         MessageChoiceDialog(
             personName = person.name,
@@ -506,7 +509,7 @@ private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -
             onDismiss = { showMessageDialog = false },
             onWhatsAppClick = {
                 val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                val message = "Hi ${person.name},\nPlease pay the rent ₹$rentAmount for $monthName.\nThanks!"
+                val message = "Hi ${person.name},\nPlease pay the rent $rentText for $monthName.\nThanks!"
                 val whatsappNumber = "91${person.phone}"
                 val encodedMessage = URLEncoder.encode(message, "UTF-8")
                 val whatsappUri = Uri.parse("https://wa.me/$whatsappNumber?text=$encodedMessage")
@@ -520,7 +523,7 @@ private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -
             },
             onSmsClick = {
                 val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                val message = "Hi ${person.name},\nPlease pay the rent ₹$rentAmount for $monthName.\nThanks!"
+                val message = "Hi ${person.name},\nPlease pay the rent $rentText for $monthName.\nThanks!"
                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${person.phone}"))
                 intent.putExtra("sms_body", message)
                 try {

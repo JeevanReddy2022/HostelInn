@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.data.ResidentWithRoom
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.util.paiseToText
 import com.example.hostelmanager.domain.validation.AmountRules
 import com.example.hostelmanager.domain.validation.DateRules
 import com.example.hostelmanager.ui.components.AppDateField
@@ -229,7 +230,7 @@ fun RecordPaymentScreen(
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                "Rent: ₹${selectedResident!!.monthlyRent.paiseToRupees()}",
+                                "Rent: ${selectedResident!!.monthlyRent.paiseToText()}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = AppNavy

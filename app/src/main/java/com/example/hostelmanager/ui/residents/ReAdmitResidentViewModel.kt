@@ -1,6 +1,5 @@
 package com.example.hostelmanager.ui.residents
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hostelmanager.data.Person
 import com.example.hostelmanager.data.RoomWithOccupancy
@@ -8,6 +7,7 @@ import com.example.hostelmanager.data.Stay
 import com.example.hostelmanager.data.repository.ResidentRepository
 import com.example.hostelmanager.data.repository.RoomRepository
 import com.example.hostelmanager.domain.BillingCycle
+import com.example.hostelmanager.ui.BaseHostelViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,26 +18,21 @@ import kotlinx.coroutines.flow.stateIn
 class ReAdmitResidentViewModel(
     private val residentRepository: ResidentRepository,
     private val roomRepository: RoomRepository
-) : ViewModel() {
+) : BaseHostelViewModel() {
 
     private val _personId = MutableStateFlow("")
-    private val _hostelId = MutableStateFlow("")
 
+    // Left unchanged per Constraint 4 (keyed by _personId, not hostelId)
     val person: StateFlow<Person?> = _personId.flatMapLatest { id ->
         if (id.isEmpty()) flowOf(null) else residentRepository.getPersonByIdFlow(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val roomsForHostel: StateFlow<List<RoomWithOccupancy>> = _hostelId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(emptyList())
-        else roomRepository.getRoomsWithOccupancy(id)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val roomsForHostel: StateFlow<List<RoomWithOccupancy>> = hostelFlow(emptyList<RoomWithOccupancy>()) { id ->
+        roomRepository.getRoomsWithOccupancy(id)
+    }
 
     fun setPersonId(id: String) {
         _personId.value = id
-    }
-
-    fun setHostelId(id: String) {
-        _hostelId.value = id
     }
 
     suspend fun reAdmitResident(

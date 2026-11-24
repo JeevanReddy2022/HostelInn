@@ -55,6 +55,7 @@ import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftGreen
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.paiseToText
 
 @Composable
 fun RoomPickerDialog(
@@ -226,7 +227,7 @@ private fun RoomPickerRow(
                     color = AppText.copy(alpha = rowAlpha)
                 )
                 Text(
-                    "Beds: ${room.bedCount} · Rent: ₹${room.defaultRentPerBed / 100}",
+                    "Beds: ${room.bedCount} · Rent: ${room.defaultRentPerBed.paiseToText()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppMuted.copy(alpha = rowAlpha)
                 )

@@ -1,12 +1,13 @@
 package com.example.hostelmanager.ui.reports
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hostelmanager.data.repository.ExpenseRepository
 import com.example.hostelmanager.data.repository.HostelRepository
 import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.ResidentRepository
 import com.example.hostelmanager.data.repository.RoomRepository
+import com.example.hostelmanager.ui.BaseHostelViewModel
+import com.example.hostelmanager.util.toIsoMonth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import java.time.YearMonth
 
 data class ExpenseBreakdown(
     val category: String,
@@ -33,15 +35,13 @@ class ReportsViewModel(
     private val residentRepository: ResidentRepository,
     private val paymentRepository: PaymentRepository,
     private val expenseRepository: ExpenseRepository
-) : ViewModel() {
+) : BaseHostelViewModel() {
 
-    private val _hostelId = MutableStateFlow("")
-    private val _selectedMonth = MutableStateFlow(
-        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"))
-    )
+    private val _selectedMonth = MutableStateFlow(YearMonth.now().toIsoMonth())
 
     val selectedMonth: StateFlow<String> = _selectedMonth
 
+    // Left unchanged per Constraint 4 (combined with _selectedMonth)
     val report: StateFlow<MonthlyReport> = combine(
         _hostelId,
         _selectedMonth
@@ -78,23 +78,17 @@ class ReportsViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlyReport(0, 0, 0, emptyList()))
 
-    fun setHostelId(id: String) {
-        _hostelId.value = id
-    }
-
     fun setMonth(month: String) {
         _selectedMonth.value = month
     }
 
     fun nextMonth() {
-        val current = java.time.YearMonth.parse(_selectedMonth.value)
-        _selectedMonth.value = current.plusMonths(1)
-            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"))
+        val current = YearMonth.parse(_selectedMonth.value)
+        _selectedMonth.value = current.plusMonths(1).toIsoMonth()
     }
 
     fun previousMonth() {
-        val current = java.time.YearMonth.parse(_selectedMonth.value)
-        _selectedMonth.value = current.minusMonths(1)
-            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"))
+        val current = YearMonth.parse(_selectedMonth.value)
+        _selectedMonth.value = current.minusMonths(1).toIsoMonth()
     }
 }

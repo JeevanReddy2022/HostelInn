@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppText
+import com.example.hostelmanager.util.paiseToText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,7 +186,7 @@ fun PastResidentCard(resident: ResidentWithRoom, onReAdmit: () -> Unit, onClick:
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "💰 Last rent: ₹${resident.monthlyRent / 100}",
+                    "💰 Last rent: ${resident.monthlyRent.paiseToText()}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppNavy,
                     fontWeight = FontWeight.Medium

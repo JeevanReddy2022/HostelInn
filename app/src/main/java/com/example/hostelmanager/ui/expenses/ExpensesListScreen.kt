@@ -87,6 +87,7 @@ import com.example.hostelmanager.ui.theme.AppSoftGreen
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
 import com.example.hostelmanager.util.formatDisplayDate
+import com.example.hostelmanager.util.formatMonth
 import com.example.hostelmanager.util.formatRupees
 import java.io.File
 
@@ -261,7 +262,7 @@ fun ExpensesListScreen(
                     val inMonth = allExpenses.filter { monthKeyOf(it.expenseDate) == key }
                     add(
                         PickerOption(
-                            label = formatExpenseMonth(key),
+                            label = formatMonth(key),
                             caption = "${inMonth.size} entries · ${formatRupees(inMonth.sumOf { it.amountPaise })}",
                             trailing = "${inMonth.size}",
                             selected = filters.month == key,
@@ -439,7 +440,7 @@ private fun ExpenseControlDeck(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
-                    label = filters.month?.let { formatExpenseMonth(it) } ?: "All months",
+                    label = filters.month?.let { formatMonth(it) } ?: "All months",
                     icon = Icons.Default.CalendarMonth,
                     active = filters.month != null,
                     onClick = { onOpenPicker(ExpensePicker.MONTH) }

@@ -53,6 +53,7 @@ import com.example.hostelmanager.ui.theme.AppNavy
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.util.paiseToText
 import com.example.hostelmanager.ui.theme.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -158,7 +159,7 @@ fun ArchivedRoomsScreen(
                                 Text("Floor ${room.floor}", style = MaterialTheme.typography.bodySmall, color = AppMuted)
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "${room.bedCount} Beds · ₹${room.defaultRentPerBed / 100}/bed",
+                                    "${room.bedCount} Beds · ${room.defaultRentPerBed.paiseToText()}/bed",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = AppNavy,
                                     fontWeight = FontWeight.Medium

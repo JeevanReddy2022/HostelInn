@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -42,12 +41,6 @@ data class ExpenseFilters(
 
 internal fun monthKeyOf(date: String): String =
     if (date.length >= 7) date.substring(0, 7) else ""
-
-internal fun formatExpenseMonth(yyyyMm: String): String {
-    val parsed = runCatching { YearMonth.parse(yyyyMm) }.getOrNull() ?: return yyyyMm
-    val name = parsed.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-    return "$name ${parsed.year}"
-}
 
 internal fun filterAndSortExpenses(
     expenses: List<Expense>,

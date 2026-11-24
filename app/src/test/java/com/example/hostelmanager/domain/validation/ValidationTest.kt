@@ -38,6 +38,14 @@ class ValidationTest {
     }
 
     @Test
+    fun `validateAmount boundary checks`() {
+        assertNotNull(AmountRules.validateAmount("0", "Amount"))
+        assertNull(AmountRules.validateAmount("99", "Amount"))
+        assertNull(AmountRules.validateAmount("100", "Amount"))
+        assertNull(AmountRules.validateAmount("150000", "Amount"))
+    }
+
+    @Test
     fun `validateResidentForm validates all fields`() {
         val validForm = ResidentFormInput(
             name = "John Doe",

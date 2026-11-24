@@ -81,6 +81,8 @@ import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftOrange
 import com.example.hostelmanager.ui.theme.AppText
 import com.example.hostelmanager.util.formatRupees
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.paiseToText
 import java.io.File
 import java.net.URLEncoder
 import java.time.LocalDate
@@ -395,7 +397,7 @@ fun ResidentCard(
     }
 
     if (showMessageDialog) {
-        val rentAmount = residentWithRoom.monthlyRent / 100
+        val rentAmount = residentWithRoom.monthlyRent.paiseToRupees()
         MessageChoiceDialog(
             personName = person.name,
             phone = person.phone,
@@ -403,7 +405,7 @@ fun ResidentCard(
             onDismiss = { showMessageDialog = false },
             onWhatsAppClick = {
                 val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                val message = "Hi ${person.name},\nPlease pay the rent ₹$rentAmount for $monthName.\nThanks!"
+                val message = "Hi ${person.name},\nPlease pay the rent ${residentWithRoom.monthlyRent.paiseToText()} for $monthName.\nThanks!"
                 val whatsappNumber = "91${person.phone}"
                 val encodedMessage = URLEncoder.encode(message, "UTF-8")
                 val whatsappUri = Uri.parse("https://wa.me/$whatsappNumber?text=$encodedMessage")
@@ -417,7 +419,7 @@ fun ResidentCard(
             },
             onSmsClick = {
                 val monthName = LocalDate.now().month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                val message = "Hi ${person.name},\nPlease pay the rent ₹$rentAmount for $monthName.\nThanks!"
+                val message = "Hi ${person.name},\nPlease pay the rent ${residentWithRoom.monthlyRent.paiseToText()} for $monthName.\nThanks!"
                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${person.phone}"))
                 intent.putExtra("sms_body", message)
                 try {

@@ -48,6 +48,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.components.SectionHeader
+import com.example.hostelmanager.util.paiseToRupees
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
@@ -163,7 +165,7 @@ fun AddResidentScreen(
     LaunchedEffect(selectedRoom) {
         val r = selectedRoom
         if (r != null && rent.isEmpty()) {
-            rent = (r.room.defaultRentPerBed / 100).toString()
+            rent = r.room.defaultRentPerBed.paiseToRupees().toString()
         }
     }
 
@@ -532,7 +534,7 @@ fun AddResidentScreen(
             onDismiss = { showRoomPicker = false },
             onSelect = { roomWithOcc ->
                 selectedRoom = roomWithOcc
-                rent = (roomWithOcc.room.defaultRentPerBed / 100).toString()
+                rent = roomWithOcc.room.defaultRentPerBed.paiseToRupees().toString()
             }
         )
     }
@@ -577,24 +579,5 @@ fun AddResidentScreen(
         ) {
             DatePicker(state = dobDatePickerState)
         }
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            color = AppText,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .width(32.dp)
-                .height(2.dp)
-                .background(AppNavy)
-        )
     }
 }

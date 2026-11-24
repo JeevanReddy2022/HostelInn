@@ -47,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.components.SectionHeader
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -439,25 +440,6 @@ fun EditResidentScreen(
         ) {
             DatePicker(state = dobDatePickerState)
         }
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            color = AppText,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .width(32.dp)
-                .height(2.dp)
-                .background(AppNavy)
-        )
     }
 }
 

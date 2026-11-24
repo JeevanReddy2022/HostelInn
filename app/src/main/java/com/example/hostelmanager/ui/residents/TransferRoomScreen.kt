@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.data.RoomWithOccupancy
 import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.util.paiseToText
+import com.example.hostelmanager.ui.components.DetailRow
 import com.example.hostelmanager.domain.validation.AmountRules
 import com.example.hostelmanager.domain.validation.DateRules
 import com.example.hostelmanager.ui.components.AppDateField
@@ -144,9 +146,9 @@ fun TransferRoomScreen(
                     Text("Current Stay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppNavy)
                     Spacer(Modifier.height(10.dp))
                     DetailRow("Room", currentRoom?.roomNumber ?: "—")
-                    DetailRow("Monthly Rent", "₹${(stay?.monthlyRent ?: 0L).paiseToRupees()}")
+                    DetailRow("Monthly Rent", (stay?.monthlyRent ?: 0L).paiseToText())
                     DetailRow("Joined", stay?.joinDate ?: "—")
-                    DetailRow("Deposit held", "₹${(stay?.depositCollected ?: 0L).paiseToRupees()}")
+                    DetailRow("Deposit held", (stay?.depositCollected ?: 0L).paiseToText())
                 }
             }
 
@@ -195,7 +197,7 @@ fun TransferRoomScreen(
                             ) {
                                 Column {
                                     Text("Room ${target.room.roomNumber}", fontWeight = FontWeight.Bold, color = AppText)
-                                    Text("$vacancy free bed(s) · ₹${target.room.defaultRentPerBed.paiseToRupees()}/mo", style = MaterialTheme.typography.bodySmall, color = AppMuted)
+                                    Text("$vacancy free bed(s) · ${target.room.defaultRentPerBed.paiseToText()}/mo", style = MaterialTheme.typography.bodySmall, color = AppMuted)
                                 }
                                 if (isSelected) {
                                     Text("Selected", color = AppNavy, fontWeight = FontWeight.Bold)
@@ -255,19 +257,6 @@ fun TransferRoomScreen(
                 Text("Confirm Transfer", fontWeight = FontWeight.Bold)
             }
         }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = AppMuted, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = AppText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

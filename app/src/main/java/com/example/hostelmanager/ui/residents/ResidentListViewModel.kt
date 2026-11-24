@@ -1,15 +1,10 @@
 package com.example.hostelmanager.ui.residents
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.hostelmanager.data.ResidentWithRoom
 import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.ui.BaseHostelViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
 
 internal fun searchResidents(
     residents: List<ResidentWithRoom>,
@@ -29,27 +24,17 @@ internal fun searchResidents(
 
 class ResidentListViewModel(
     private val residentRepository: ResidentRepository
-) : ViewModel() {
+) : BaseHostelViewModel() {
 
-    private val _hostelId = MutableStateFlow("")
-
-    val residents: StateFlow<List<ResidentWithRoom>> = _hostelId.flatMapLatest { id ->
-        if (id.isEmpty()) flowOf(emptyList())
-        else residentRepository.getActiveResidentsByHostel(id)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    val residents: StateFlow<List<ResidentWithRoom>> = hostelFlow(emptyList<ResidentWithRoom>()) { id ->
+        residentRepository.getActiveResidentsByHostel(id)
+    }
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query
 
-    fun setHostelId(id: String) {
-        if (_hostelId.value != id) {
-            _hostelId.value = id
-            _query.value = ""
-        }
+    override fun onHostelChanged() {
+        _query.value = ""
     }
 
     fun setQuery(value: String) {
