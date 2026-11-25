@@ -5,6 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -33,12 +37,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         val appContainer = (application as HostelManagerApplication).container
 
-        // ✅ FIX: Read synchronously BEFORE setContent to prevent the "flash" of the wrong screen
         val lastHostelId = PreferencesManager.getLastHostelId(this)
         val initialDestination = if (lastHostelId != null) {
-            "hostel_dashboard/$lastHostelId"
+            "hostel_dashboard"
         } else {
             "hostel_list"
         }
@@ -48,53 +52,68 @@ class MainActivity : ComponentActivity() {
                 HostelManagerTheme {
                     val navController = rememberNavController()
 
-                    // ✅ NavHost is initialized with the correct destination from frame 1
+                    // ✅ Level C: hostel ID lives here as state, not in the route.
+                    // Switching hostels just updates this value — no navigation, no rebuild.
+                    var currentHostelId by remember { mutableStateOf(lastHostelId ?: "") }
+
                     NavHost(navController = navController, startDestination = initialDestination) {
 
                         composable("hostel_list") {
                             HostelListScreen(
                                 onHostelClick = { hostelId ->
+                                    currentHostelId = hostelId
                                     PreferencesManager.saveLastHostelId(this@MainActivity, hostelId)
-                                    navController.navigate("hostel_dashboard/$hostelId") {
+                                    navController.navigate("hostel_dashboard") {
                                         popUpTo("hostel_list") { inclusive = true }
                                     }
                                 }
                             )
                         }
 
-                        composable(
-                            route = "hostel_dashboard/{hostelId}",
-                            arguments = listOf(navArgument("hostelId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val hostelId = backStackEntry.arguments?.getString("hostelId") ?: ""
+                        // ✅ Route is now just "hostel_dashboard" — no {hostelId} argument
+                        composable("hostel_dashboard") {
                             HostelDashboardScreen(
-                                hostelId = hostelId,
+                                hostelId = currentHostelId,
                                 onBackClick = {
-                                    // Clear saved hostel when manually going back to list
                                     PreferencesManager.clearLastHostelId(this@MainActivity)
                                     navController.popBackStack()
                                 },
-                                onAddResidentClick = { navController.navigate("add_resident/$hostelId/none") },
-                                onRoomClick = { roomId -> navController.navigate("room_details/$hostelId/$roomId") },
-                                onResidentClick = { personId -> navController.navigate("resident_details/$personId") },
-                                onArchivedRoomsClick = { navController.navigate("archived_rooms/$hostelId") },
-                                onPastResidentsClick = { navController.navigate("past_residents/$hostelId") },
-                                onRecordPaymentClick = { personId -> navController.navigate("record_payment/$hostelId/$personId") },
-                                onPaymentHistoryClick = { navController.navigate("payment_history/$hostelId") },
-                                onAddExpenseClick = { navController.navigate("add_expense/$hostelId") },
-                                onReportsClick = { navController.navigate("reports/$hostelId") },
+                                onAddResidentClick = {
+                                    navController.navigate("add_resident/$currentHostelId/none")
+                                },
+                                onRoomClick = { roomId ->
+                                    navController.navigate("room_details/$currentHostelId/$roomId")
+                                },
+                                onResidentClick = { personId ->
+                                    navController.navigate("resident_details/$personId")
+                                },
+                                onArchivedRoomsClick = {
+                                    navController.navigate("archived_rooms/$currentHostelId")
+                                },
+                                onPastResidentsClick = {
+                                    navController.navigate("past_residents/$currentHostelId")
+                                },
+                                onRecordPaymentClick = { personId ->
+                                    navController.navigate("record_payment/$currentHostelId/$personId")
+                                },
+                                onPaymentHistoryClick = {
+                                    navController.navigate("payment_history/$currentHostelId")
+                                },
+                                onAddExpenseClick = {
+                                    navController.navigate("add_expense/$currentHostelId")
+                                },
+                                onReportsClick = {
+                                    navController.navigate("reports/$currentHostelId")
+                                },
                                 onHostelSwitch = { newHostelId ->
+                                    // ✅ Level C: just swap the ID. No navigation. No rebuild.
+                                    currentHostelId = newHostelId
                                     PreferencesManager.saveLastHostelId(this@MainActivity, newHostelId)
-                                    navController.navigate("hostel_dashboard/$newHostelId") {
-                                        //popUpTo("hostel_dashboard") { inclusive = true }
-                                        popUpTo("hostel_dashboard/{hostelId}") { inclusive = true }
-                                    }
                                 },
                                 onAllHostelsClick = {
                                     PreferencesManager.clearLastHostelId(this@MainActivity)
                                     navController.navigate("hostel_list") {
-                                        //popUpTo("hostel_dashboard") { inclusive = true }
-                                        popUpTo("hostel_dashboard/{hostelId}") { inclusive = true }
+                                        popUpTo("hostel_dashboard") { inclusive = true }
                                     }
                                 }
                             )

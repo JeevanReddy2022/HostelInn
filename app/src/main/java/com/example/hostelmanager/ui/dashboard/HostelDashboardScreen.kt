@@ -1,5 +1,7 @@
 package com.example.hostelmanager.ui.dashboard
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -47,13 +49,13 @@ fun HostelDashboardScreen(
     onRecordPaymentClick: (String) -> Unit,
     onPaymentHistoryClick: () -> Unit,
     onAddExpenseClick: () -> Unit,
-    onReportsClick: () -> Unit, // ✅ New
+    onReportsClick: () -> Unit,
     onHostelSwitch: (String) -> Unit,
     onAllHostelsClick: () -> Unit,
     hostelViewModel: HostelViewModel = appViewModel()
 ) {
-    // ✅ Dashboard is now Tab 0
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+
     val tabs = listOf("Dashboard", "Rooms", "Residents", "Payments", "Expenses")
     val icons = listOf(
         Icons.Default.Home,          // Dashboard
@@ -65,6 +67,7 @@ fun HostelDashboardScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
     val hostels by hostelViewModel.hostels.collectAsStateWithLifecycle()
     val currentHostel = hostels.find { it.id == hostelId }
 
@@ -87,7 +90,7 @@ fun HostelDashboardScreen(
                         scope.launch { drawerState.close() }
                         onPastResidentsClick()
                     },
-                    onReportsClick = { // ✅ Reports in drawer
+                    onReportsClick = {
                         scope.launch { drawerState.close() }
                         onReportsClick()
                     },
@@ -158,23 +161,33 @@ fun HostelDashboardScreen(
         ) { padding ->
             val modifierWithPadding = Modifier.padding(padding)
 
-            key(hostelId) {
-                when (selectedTab) {
-                    0 -> DashboardTabContent(hostelId = hostelId, modifier = modifierWithPadding) // ✅ Tab 0 is Dashboard
-                    1 -> RoomListScreen(hostelId = hostelId, onRoomClick = onRoomClick, modifier = modifierWithPadding)
-                    2 -> ResidentListScreen(hostelId = hostelId, onAddClick = onAddResidentClick, onResidentClick = onResidentClick, modifier = modifierWithPadding)
-                    3 -> PaymentsListScreen(hostelId = hostelId, onRecordPaymentClick = onRecordPaymentClick, onPaymentHistoryClick = onPaymentHistoryClick, modifier = modifierWithPadding)
-                    4 -> ExpensesListScreen(hostelId = hostelId, onAddExpenseClick = onAddExpenseClick, modifier = modifierWithPadding)
+            // Level C: no key(hostelId) — the screen and its ViewModels stay alive,
+            // only the data swaps via setHostelId().
+            //
+            // Level A: a tiny 180ms Crossfade keyed on hostel + tab, so switching
+            // hostel (or tab) fades smoothly instead of snapping.
+            Crossfade(
+                targetState = hostelId to selectedTab,
+                animationSpec = tween(durationMillis = 180),
+                label = "hostelTabCrossfade"
+            ) { (targetHostelId, targetTab) ->
+                when (targetTab) {
+                    0 -> DashboardTabContent(hostelId = targetHostelId, modifier = modifierWithPadding)
+                    1 -> RoomListScreen(hostelId = targetHostelId, onRoomClick = onRoomClick, modifier = modifierWithPadding)
+                    2 -> ResidentListScreen(hostelId = targetHostelId, onAddClick = onAddResidentClick, onResidentClick = onResidentClick, modifier = modifierWithPadding)
+                    3 -> PaymentsListScreen(hostelId = targetHostelId, onRecordPaymentClick = onRecordPaymentClick, onPaymentHistoryClick = onPaymentHistoryClick, modifier = modifierWithPadding)
+                    4 -> ExpensesListScreen(hostelId = targetHostelId, onAddExpenseClick = onAddExpenseClick, modifier = modifierWithPadding)
                 }
             }
         }
     }
 }
 
-// ✅ Reuses the stats UI from DashboardScreen without the outer Scaffold
+// Reuses the stats UI from DashboardScreen without the outer Scaffold
 @Composable
 private fun DashboardTabContent(hostelId: String, modifier: Modifier = Modifier, viewModel: DashboardViewModel = appViewModel()) {
     SideEffect { viewModel.setHostelId(hostelId) }
+
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 
@@ -215,7 +228,7 @@ private fun DrawerContent(
     onHostelClick: (String) -> Unit,
     onArchivedRoomsClick: () -> Unit,
     onPastResidentsClick: () -> Unit,
-    onReportsClick: () -> Unit, // ✅ New
+    onReportsClick: () -> Unit,
     onAllHostelsClick: () -> Unit
 ) {
     Column(
@@ -232,12 +245,15 @@ private fun DrawerContent(
                 }
             }
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         DrawerMenuItem(icon = Icons.Default.Apartment, title = "All Hostels", onClick = onAllHostelsClick)
+
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
         Text(text = "Switch Hostel", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+
         hostels.forEach { hostel ->
             DrawerHostelItem(hostel = hostel, isSelected = hostel.id == currentHostel?.id, onClick = { if (hostel.id != currentHostel?.id) onHostelClick(hostel.id) })
         }
@@ -246,7 +262,6 @@ private fun DrawerContent(
 
         Text(text = "Analytics & Archives", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
-        // ✅ Reports moved here
         DrawerMenuItem(icon = Icons.Default.BarChart, title = "Reports", onClick = onReportsClick)
         DrawerMenuItem(icon = Icons.Default.Archive, title = "Archived Rooms", onClick = onArchivedRoomsClick)
         DrawerMenuItem(icon = Icons.Default.People, title = "Past Residents", onClick = onPastResidentsClick)
