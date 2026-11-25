@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HostelManager</string>
+    <string name="app_name">HostelInn</string>
 
     <!-- Navigation & Titles -->
     <string name="title_dashboard">Dashboard</string>

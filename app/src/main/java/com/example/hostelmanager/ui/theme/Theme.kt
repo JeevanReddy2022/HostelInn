@@ -7,6 +7,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import com.example.hostelmanager.di.AppContainer
+import com.example.hostelmanager.di.LocalAppContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -46,11 +49,11 @@ private val DarkColorScheme = darkColorScheme(
     outline = Color(0xFF475569),
     outlineVariant = Color(0xFF334155)
 )
-
 @Composable
 fun HostelManagerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    container: AppContainer? = null,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -61,10 +64,18 @@ fun HostelManagerTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val wrappedContent: @Composable () -> Unit = {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
+    if (container != null) {
+        CompositionLocalProvider(LocalAppContainer provides container) {
+            wrappedContent()
+        }
+    } else {
+        wrappedContent()
+    }
 }
