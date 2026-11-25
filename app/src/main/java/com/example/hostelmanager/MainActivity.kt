@@ -86,13 +86,15 @@ class MainActivity : ComponentActivity() {
                                 onHostelSwitch = { newHostelId ->
                                     PreferencesManager.saveLastHostelId(this@MainActivity, newHostelId)
                                     navController.navigate("hostel_dashboard/$newHostelId") {
-                                        popUpTo("hostel_dashboard") { inclusive = true }
+                                        //popUpTo("hostel_dashboard") { inclusive = true }
+                                        popUpTo("hostel_dashboard/{hostelId}") { inclusive = true }
                                     }
                                 },
                                 onAllHostelsClick = {
                                     PreferencesManager.clearLastHostelId(this@MainActivity)
                                     navController.navigate("hostel_list") {
-                                        popUpTo("hostel_dashboard") { inclusive = true }
+                                        //popUpTo("hostel_dashboard") { inclusive = true }
+                                        popUpTo("hostel_dashboard/{hostelId}") { inclusive = true }
                                     }
                                 }
                             )
