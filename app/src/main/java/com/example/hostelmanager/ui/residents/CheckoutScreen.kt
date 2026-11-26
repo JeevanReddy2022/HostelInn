@@ -152,7 +152,8 @@ fun CheckoutScreen(
                     Text("Current Stay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppNavy)
                     Spacer(Modifier.height(10.dp))
                     DetailRow("Room", currentRoom?.roomNumber ?: "—")
-                    DetailRow("Monthly Rent", (activeStay?.monthlyRent ?: 0L).paiseToText())
+                    val checkoutRentLabel = if ((activeStay?.dailyRent ?: 0L) > 0) "${activeStay!!.dailyRent.paiseToText()}/day" else (activeStay?.monthlyRent ?: 0L).paiseToText()
+                    DetailRow("Rent", checkoutRentLabel)
                     DetailRow("Joined", activeStay?.joinDate ?: "—")
                     DetailRow("Deposit held", depositPaise.paiseToText())
                 }
@@ -184,7 +185,8 @@ fun CheckoutScreen(
             if (wantsRefund) {
                 ExposedDropdownMenuBox(
                     expanded = refundModeExpanded,
-                    onExpandedChange = { refundModeExpanded = !refundModeExpanded }
+                    onExpandedChange = { refundModeExpanded = !refundModeExpanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
                         value = selectedRefundMode,
@@ -194,7 +196,7 @@ fun CheckoutScreen(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = refundModeExpanded) },
                         modifier = Modifier.fillMaxWidth().menuAnchor(),
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = appTextFieldColors()
                     )
                     ExposedDropdownMenu(

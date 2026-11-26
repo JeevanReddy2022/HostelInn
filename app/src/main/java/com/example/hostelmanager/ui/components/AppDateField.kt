@@ -1,5 +1,6 @@
 package com.example.hostelmanager.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.DatePicker
@@ -29,7 +30,7 @@ fun AppDateField(
     onValueChange: (String) -> Unit,
     error: String? = null,
     minDateIso: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier.fillMaxWidth()
 ) {
     var showDialog by remember { mutableStateOf(false) }
 

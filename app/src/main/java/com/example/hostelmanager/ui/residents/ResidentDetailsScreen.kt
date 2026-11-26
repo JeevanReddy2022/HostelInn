@@ -229,7 +229,8 @@ fun ResidentDetailsScreen(
                         }
                     } else {
                         DetailRow("Room", room?.roomNumber ?: "—", weighted = true)
-                        DetailRow("Monthly Rent", stay.monthlyRent.paiseToText(), weighted = true)
+                        val rentLabel = if (stay.dailyRent > 0) "${stay.dailyRent.paiseToText()}/day" else stay.monthlyRent.paiseToText()
+                        DetailRow("Rent", rentLabel, weighted = true)
                         DetailRow("Join Date", stay.joinDate, weighted = true)
                         DetailRow("Deposit", stay.depositCollected.paiseToText(), weighted = true)
 

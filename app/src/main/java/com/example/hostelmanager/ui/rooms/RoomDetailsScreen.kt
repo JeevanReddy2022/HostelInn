@@ -90,10 +90,10 @@ import java.util.Locale
 @Composable
 fun RoomDetailsScreen(
     roomId: String,
-    hostelId: String, // Passed to navigation for Add Resident
+    hostelId: String,
     onBackClick: () -> Unit,
     onResidentClick: (String) -> Unit,
-    onAddResidentClick: () -> Unit, // Callback to navigate to Add Resident
+    onAddResidentClick: () -> Unit,
     viewModel: RoomDetailsViewModel = appViewModel()
 ) {
     LaunchedEffect(roomId) {
@@ -294,7 +294,7 @@ fun RoomDetailsScreen(
                         ) {
                             Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Add Resident to this Room", fontWeight = FontWeight.Bold, color= AppGreen)
+                            Text("Add Resident to this Room", fontWeight = FontWeight.Bold, color = AppGreen)
                         }
                     }
                 }
@@ -314,7 +314,6 @@ fun RoomDetailsScreen(
         }
     }
 
-    // 1. EDIT DIALOG
     if (showEditDialog && room != null) {
         RoomFormDialog(
             room = room!!,
@@ -327,7 +326,6 @@ fun RoomDetailsScreen(
         )
     }
 
-    // 2. RENT REVISION DIALOG
     val prompt = rentPrompt
     if (prompt != null) {
         AlertDialog(
@@ -357,7 +355,6 @@ fun RoomDetailsScreen(
         )
     }
 
-    // 3. OCCUPIED DIALOG
     if (showOccupiedDialog && room != null) {
         AlertDialog(
             onDismissRequest = { showOccupiedDialog = false },
@@ -380,7 +377,6 @@ fun RoomDetailsScreen(
         )
     }
 
-    // 4. ARCHIVE DIALOG
     if (showArchiveDialog && room != null) {
         AlertDialog(
             onDismissRequest = { showArchiveDialog = false },
@@ -407,7 +403,6 @@ fun RoomDetailsScreen(
         )
     }
 
-    // 5. DELETE DIALOG
     if (showDeleteDialog && room != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -433,7 +428,7 @@ fun RoomDetailsScreen(
             }
         )
     }
-    // 6. Room full dialog
+
     if (showRoomFullDialog) {
         AlertDialog(
             onDismissRequest = { showRoomFullDialog = false },
@@ -454,12 +449,18 @@ fun RoomDetailsScreen(
     }
 }
 
-
 @Composable
 private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -> Unit) {
     val person = residentWithRoom.person
     val context = LocalContext.current
     var showMessageDialog by remember { mutableStateOf(false) }
+
+    // ✅ Show daily rent for daily guests, monthly rent for monthly residents
+    val rentLabel = if (residentWithRoom.dailyRent > 0) {
+        "${residentWithRoom.dailyRent.paiseToText()}/day"
+    } else {
+        residentWithRoom.monthlyRent.paiseToText()
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
@@ -478,7 +479,7 @@ private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -
             Column(modifier = Modifier.weight(1f)) {
                 Text(person.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = AppText)
                 Text("📞 ${person.phone}", style = MaterialTheme.typography.bodyMedium, color = AppMuted)
-                Text("💰 Rent: ${residentWithRoom.monthlyRent.paiseToText()}", style = MaterialTheme.typography.bodySmall, color = AppNavy, fontWeight = FontWeight.Medium)
+                Text("💰 Rent: $rentLabel", style = MaterialTheme.typography.bodySmall, color = AppNavy, fontWeight = FontWeight.Medium)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -502,7 +503,6 @@ private fun ResidentDetailCard(residentWithRoom: ResidentWithRoom, onClick: () -
     if (showMessageDialog) {
         val rentAmount = residentWithRoom.monthlyRent.paiseToRupees()
         val rentText = residentWithRoom.monthlyRent.paiseToText()
-        // MessageChoiceDialog is the shared one from ui.residents (WhatsApp/SMS buttons with logos)
         MessageChoiceDialog(
             personName = person.name,
             phone = person.phone,

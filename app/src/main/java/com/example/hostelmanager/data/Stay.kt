@@ -32,10 +32,13 @@ data class Stay(
     val depositRefundMode: String? = null,
     val isActive: Boolean = true,
     val returnOverlapDecision: String? = null,
-    // NEW: Day of month (1-31) that starts this resident's billing cycle.
-    // Set once when they join, carried forward across room transfers.
     @ColumnInfo(defaultValue = "1")
     val billingAnchorDay: Int = 1,
+    // NEW: For daily guests. 0 means it's a monthly stay.
+    @ColumnInfo(defaultValue = "0")
+    val dailyRent: Long = 0,
+    // NEW: For residents who have given notice to leave.
+    val noticeDate: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

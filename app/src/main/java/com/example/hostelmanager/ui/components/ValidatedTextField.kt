@@ -1,5 +1,7 @@
 package com.example.hostelmanager.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppNavy
@@ -38,7 +41,7 @@ fun ValidatedTextField(
     onValueChange: (String) -> Unit,
     label: String,
     error: String?,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.fillMaxWidth(),
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -51,6 +54,7 @@ fun ValidatedTextField(
         label = { Text(label) },
         isError = error != null,
         supportingText = error?.let { err -> { Text(err, style = MaterialTheme.typography.bodySmall) } },
+        shape = RoundedCornerShape(14.dp),
         colors = appTextFieldColors(),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
         keyboardActions = keyboardActions,

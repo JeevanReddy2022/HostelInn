@@ -81,32 +81,23 @@ private const val PENDING_BUFFER_RUPEES = 2000L
 fun RecordPaymentScreen(
     hostelId: String,
     prefilledPersonId: String = "",
+    prefilledAmountPaise: Long = 0L, // NEW
     onBackClick: () -> Unit,
     viewModel: RecordPaymentViewModel = appViewModel()
 ) {
-    LaunchedEffect(hostelId) {
-        viewModel.setHostelId(hostelId)
-    }
-
+    LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
     val allResidents by viewModel.residents.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedResident by remember { mutableStateOf<ResidentWithRoom?>(null) }
     var amount by remember { mutableStateOf("") }
-
     val paymentModes = listOf("UPI", "Cash", "Bank Transfer")
     var selectedMode by remember { mutableStateOf("UPI") }
     var expandedMode by remember { mutableStateOf(false) }
-
-    var paymentDate by remember {
-        mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
-    }
-    var recordedDate by remember {
-        mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
-    }
+    var paymentDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)) }
+    var recordedDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)) }
     var note by remember { mutableStateOf("") }
-
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(prefilledPersonId, allResidents) {
@@ -125,20 +116,23 @@ fun RecordPaymentScreen(
         }.take(5)
     }
 
-    LaunchedEffect(selectedResident) {
+    // UPDATED: Uses prefilledAmountPaise if provided
+    LaunchedEffect(selectedResident, prefilledAmountPaise) {
         val resident = selectedResident
         if (resident != null && amount.isEmpty()) {
-            amount = resident.monthlyRent.paiseToRupees().toString()
+            amount = if (prefilledAmountPaise > 0) {
+                prefilledAmountPaise.paiseToRupees().toString()
+            } else {
+                resident.monthlyRent.paiseToRupees().toString()
+            }
         }
     }
 
     val rentRupees = selectedResident?.monthlyRent?.paiseToRupees() ?: 0L
     val maxAllowed = rentRupees + PENDING_BUFFER_RUPEES
-
     val amountErr = AmountRules.validateAmount(amount, "Amount", minRupees = 1, maxRupees = if (selectedResident != null) maxAllowed else null)
     val paymentDateErr = DateRules.validateDate(paymentDate, "Payment date", notFuture = true)
     val recordedDateErr = DateRules.validateDate(recordedDate, "Recorded date", notFuture = true)
-
     val isFormValid = selectedResident != null && amountErr == null && paymentDateErr == null && recordedDateErr == null
 
     Scaffold(
@@ -160,210 +154,96 @@ fun RecordPaymentScreen(
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .imePadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().padding(padding).imePadding().padding(horizontal = 20.dp, vertical = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (selectedResident == null) {
                 ValidatedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = "Search resident (name, phone, or room)",
-                    error = null,
-                    imeAction = ImeAction.Search,
-                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
+                    value = searchQuery, onValueChange = { searchQuery = it },
+                    label = "Search resident (name, phone, or room)", error = null,
+                    imeAction = ImeAction.Search, keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
                 )
-
                 if (filteredResidents.isNotEmpty()) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = AppCard),
-                        border = BorderStroke(1.dp, AppBorder),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppCard), border = BorderStroke(1.dp, AppBorder), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column {
                             filteredResidents.forEach { resident ->
-                                ResidentSearchResult(
-                                    resident = resident,
-                                    onClick = {
-                                        selectedResident = resident
-                                        searchQuery = ""
-                                    }
-                                )
+                                ResidentSearchResult(resident = resident, onClick = { selectedResident = resident; searchQuery = "" })
                             }
                         }
                     }
                 }
             } else {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            selectedResident = null
-                            amount = ""
-                        },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = AppSoftBlue),
-                    border = BorderStroke(1.dp, AppBorder)
+                    modifier = Modifier.fillMaxWidth().clickable { selectedResident = null; amount = "" },
+                    shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = AppSoftBlue), border = BorderStroke(1.dp, AppBorder)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                selectedResident!!.person.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = AppNavy
-                            )
-                            Text(
-                                "Room ${selectedResident!!.roomNumber}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppMuted
-                            )
+                            Text(selectedResident!!.person.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AppNavy)
+                            Text("Room ${selectedResident!!.roomNumber}", style = MaterialTheme.typography.bodySmall, color = AppMuted)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                "Rent: ${selectedResident!!.monthlyRent.paiseToText()}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = AppNavy
-                            )
-                            IconButton(onClick = {
-                                selectedResident = null
-                                amount = ""
-                            }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = AppNavy)
-                            }
+                            Text("Rent: ${selectedResident!!.monthlyRent.paiseToText()}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppNavy)
+                            IconButton(onClick = { selectedResident = null; amount = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = AppNavy) }
                         }
                     }
                 }
             }
 
             ValidatedTextField(
-                value = amount,
-                onValueChange = { input -> amount = input.filter { it.isDigit() } },
-                label = "Amount (₹) *",
-                error = amountErr,
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Next,
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+                value = amount, onValueChange = { input -> amount = input.filter { it.isDigit() } },
+                label = "Amount (₹) *", error = amountErr, keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next, keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
             )
+            AppDateField(label = "Payment Date (when received) *", value = paymentDate, onValueChange = { paymentDate = it }, error = paymentDateErr)
+            AppDateField(label = "Recorded Date (when entered) *", value = recordedDate, onValueChange = { recordedDate = it }, error = recordedDateErr)
 
-            AppDateField(
-                label = "Payment Date (when received) *",
-                value = paymentDate,
-                onValueChange = { paymentDate = it },
-                error = paymentDateErr
-            )
-
-            AppDateField(
-                label = "Recorded Date (when entered) *",
-                value = recordedDate,
-                onValueChange = { recordedDate = it },
-                error = recordedDateErr
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = expandedMode,
-                onExpandedChange = { expandedMode = !expandedMode }
-            ) {
+            ExposedDropdownMenuBox(expanded = expandedMode, onExpandedChange = { expandedMode = !expandedMode }) {
                 OutlinedTextField(
-                    value = selectedMode,
-                    onValueChange = { },
-                    readOnly = true,
-                    label = { Text("Payment Mode") },
+                    value = selectedMode, onValueChange = { }, readOnly = true, label = { Text("Payment Mode") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMode) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = appTextFieldColors()
+                    modifier = Modifier.fillMaxWidth().menuAnchor(), singleLine = true, shape = RoundedCornerShape(12.dp), colors = appTextFieldColors()
                 )
-                ExposedDropdownMenu(
-                    expanded = expandedMode,
-                    onDismissRequest = { expandedMode = false }
-                ) {
-                    paymentModes.forEach { mode ->
-                        DropdownMenuItem(
-                            text = { Text(mode) },
-                            onClick = {
-                                selectedMode = mode
-                                expandedMode = false
-                            }
-                        )
-                    }
+                ExposedDropdownMenu(expanded = expandedMode, onDismissRequest = { expandedMode = false }) {
+                    paymentModes.forEach { mode -> DropdownMenuItem(text = { Text(mode) }, onClick = { selectedMode = mode; expandedMode = false }) }
                 }
             }
 
             ValidatedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = "Note (optional)",
-                error = null,
-                imeAction = ImeAction.Done,
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                value = note, onValueChange = { note = it }, label = "Note (optional)", error = null,
+                imeAction = ImeAction.Done, keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
             Button(
                 onClick = {
                     val resident = selectedResident ?: return@Button
                     scope.launch {
                         val success = viewModel.recordPayment(
-                            personId = resident.person.id,
-                            amountPaise = amount.rupeesToPaise(),
-                            mode = selectedMode,
-                            paymentDate = paymentDate,
-                            recordedDate = recordedDate,
-                            note = note.trim()
+                            personId = resident.person.id, amountPaise = amount.rupeesToPaise(), mode = selectedMode,
+                            paymentDate = paymentDate, recordedDate = recordedDate, note = note.trim()
                         )
                         if (success) onBackClick()
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AppNavy,
-                    contentColor = AppOnNavy,
-                    disabledContainerColor = AppBorder,
-                    disabledContentColor = AppMuted
-                ),
+                modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AppNavy, contentColor = AppOnNavy, disabledContainerColor = AppBorder, disabledContentColor = AppMuted),
                 enabled = isFormValid
-            ) {
-                Text(
-                    "Save Payment",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            ) { Text("Save Payment", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
 
 @Composable
-private fun ResidentSearchResult(
-    resident: ResidentWithRoom,
-    onClick: () -> Unit
-) {
+private fun ResidentSearchResult(resident: ResidentWithRoom, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
             Text(resident.person.name, fontWeight = FontWeight.Bold, color = AppText)

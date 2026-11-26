@@ -7,6 +7,7 @@ data class ResidentWithStayInfo(
     val profilePhotoPath: String,
     val roomNumber: String,
     val monthlyRent: Long,
+    val dailyRent: Long = 0,
     val stayId: String,
     val isActive: Boolean,
     val checkoutDate: String?,

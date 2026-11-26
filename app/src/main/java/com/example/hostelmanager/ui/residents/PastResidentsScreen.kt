@@ -183,8 +183,13 @@ fun PastResidentCard(resident: ResidentWithRoom, onReAdmit: () -> Unit, onClick:
                     color = AppMuted
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val rentLabel = if (resident.dailyRent > 0) {
+                    "${resident.dailyRent.paiseToText()}/day"
+                } else {
+                    resident.monthlyRent.paiseToText()
+                }
                 Text(
-                    "💰 Last rent: ${resident.monthlyRent.paiseToText()}",
+                    "💰 Last rent: $rentLabel",
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppNavy,
                     fontWeight = FontWeight.Medium

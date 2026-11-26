@@ -35,6 +35,9 @@ class PaymentsViewModel(
             val result = mutableListOf<YetToPayResident>()
 
             for (resident in residents) {
+                // ✅ Skip daily guests — they don't have a monthly billing cycle
+                if (resident.dailyRent > 0) continue
+
                 val anchorDay = resident.billingAnchorDay.coerceIn(1, 31)
 
                 val cycleStart: LocalDate = if (resident.isActive) {

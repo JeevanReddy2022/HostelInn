@@ -44,6 +44,9 @@ open class FakeResidentRepository : ResidentRepository {
     }
     override suspend fun transferRoom(stay: Stay, newRoomId: String, transferDate: String, newRentPaise: Long) {}
     override suspend fun reAdmitResident(stay: Stay) {}
+    override fun getDailyGuestsByHostel(hostelId: String): Flow<List<ResidentWithRoom>> = flowOf(emptyList())
+    override fun getNoticeResidentsByHostel(hostelId: String): Flow<List<ResidentWithRoom>> = flowOf(emptyList())
+    override suspend fun updateNoticeDate(stay: Stay, noticeDate: String?) {}
 }
 
 open class FakeRoomRepository : RoomRepository {

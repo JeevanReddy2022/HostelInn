@@ -14,13 +14,10 @@ class ResidentViewModel(
     private val residentRepository: ResidentRepository,
     private val roomRepository: RoomRepository
 ) : BaseHostelViewModel() {
-
     private val _phoneError = MutableStateFlow<String?>(null)
     val phoneError: StateFlow<String?> = _phoneError
-
     private val _govtIdError = MutableStateFlow<String?>(null)
     val govtIdError: StateFlow<String?> = _govtIdError
-
     private val _emergencyError = MutableStateFlow<String?>(null)
     val emergencyError: StateFlow<String?> = _emergencyError
 
@@ -33,7 +30,8 @@ class ResidentViewModel(
         name: String, phone: String, govtIdNumber: String, emergencyContact: String,
         dateOfBirth: String, address: String, gender: String, guardianName: String,
         roomId: String, joinDate: String, rentPaise: Long, depositPaise: Long,
-        govtFrontPath: String, govtBackPath: String, profilePhotoPath: String
+        govtFrontPath: String, govtBackPath: String, profilePhotoPath: String,
+        isDailyStay: Boolean // NEW: Tracks if this is a daily guest
     ): Boolean {
         if (hostelId.isEmpty() || roomId.isEmpty()) return false
 
@@ -42,7 +40,6 @@ class ResidentViewModel(
         _emergencyError.value = null
 
         var hasDuplicates = false
-
         if (residentRepository.isPhoneDuplicate(phone)) {
             _phoneError.value = "This phone number is already in use!"
             hasDuplicates = true
@@ -55,7 +52,6 @@ class ResidentViewModel(
             _emergencyError.value = "This emergency contact is already in use!"
             hasDuplicates = true
         }
-
         if (hasDuplicates) return false
 
         val newPerson = Person(
@@ -66,19 +62,24 @@ class ResidentViewModel(
             govtIdBackPath = govtBackPath,
             profilePhotoPath = profilePhotoPath
         )
+
+        // NEW: Split the rent into the correct column based on the toggle
+        val monthlyRentPaise = if (isDailyStay) 0L else rentPaise
+        val dailyRentPaise = if (isDailyStay) rentPaise else 0L
+
         val newStay = Stay(
             personId = newPerson.id,
             hostelId = hostelId,
             roomId = roomId,
             joinDate = joinDate,
-            monthlyRent = rentPaise,
+            monthlyRent = monthlyRentPaise,
+            dailyRent = dailyRentPaise,
             depositCollected = depositPaise,
             billingAnchorDay = BillingCycle.anchorDayOf(joinDate),
             isActive = true
         )
 
         residentRepository.addResident(newPerson, newStay)
-
         return true
     }
 }

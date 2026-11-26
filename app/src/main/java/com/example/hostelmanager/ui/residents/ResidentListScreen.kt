@@ -345,8 +345,13 @@ fun ResidentCard(
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
+                    val rentLabel = if (residentWithRoom.dailyRent > 0) {
+                        "${residentWithRoom.dailyRent.paiseToText()}/day"
+                    } else {
+                        "${formatRupees(residentWithRoom.monthlyRent)}/mo"
+                    }
                     Text(
-                        "${formatRupees(residentWithRoom.monthlyRent)}/mo",
+                        rentLabel,
                         fontSize = 12.sp,
                         color = AppNavy,
                         fontWeight = FontWeight.Bold,
