@@ -11,10 +11,25 @@ import org.junit.Test
 import java.time.LocalDate
 
 class FakePaymentDao : PaymentDao {
+    override suspend fun getPaymentsForStayOnce(stayId: String): List<Payment> =
+        payments.filter { it.stayId == stayId }
     val payments = mutableListOf<Payment>()
 
     override suspend fun insertPayment(payment: Payment) {
         payments.add(payment)
+    }
+
+    override suspend fun updatePayment(payment: Payment) {
+        val index = payments.indexOfFirst { it.id == payment.id }
+        if (index != -1) {
+            payments[index] = payment
+        } else {
+            payments.add(payment)
+        }
+    }
+
+    override suspend fun getPaymentById(id: String): Payment? {
+        return payments.find { it.id == id }
     }
 
     override suspend fun deletePayment(id: String) {

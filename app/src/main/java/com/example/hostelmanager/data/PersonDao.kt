@@ -92,7 +92,7 @@ interface PersonDao {
     @Query("""
         SELECT p.id AS personId, p.name, p.phone, p.profilePhotoPath,
         r.roomNumber, s.monthlyRent, s.dailyRent, s.id AS stayId,
-        s.isActive, s.checkoutDate, s.billingAnchorDay
+        s.isActive, s.checkoutDate, s.billingAnchorDay,s.joinDate
         FROM persons p
         INNER JOIN stays s ON p.id = s.personId
         INNER JOIN rooms r ON s.roomId = r.id

@@ -11,5 +11,6 @@ data class ResidentWithStayInfo(
     val stayId: String,
     val isActive: Boolean,
     val checkoutDate: String?,
-    val billingAnchorDay: Int
+    val billingAnchorDay: Int,
+    val joinDate: String = ""   // NEW: needed for arrears math
 )

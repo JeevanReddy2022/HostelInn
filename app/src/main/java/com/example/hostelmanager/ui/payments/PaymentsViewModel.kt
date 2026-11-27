@@ -1,13 +1,14 @@
 package com.example.hostelmanager.ui.payments
 
+import com.example.hostelmanager.data.Stay
 import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.ResidentRepository
+import com.example.hostelmanager.domain.Balance
 import com.example.hostelmanager.domain.BillingCycle
 import com.example.hostelmanager.ui.BaseHostelViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 data class YetToPayResident(
     val personId: String,
@@ -16,6 +17,8 @@ data class YetToPayResident(
     val profilePhotoPath: String,
     val roomNumber: String,
     val monthlyRent: Long,
+    val balancePaise: Long,      // ✅ real money still owed (arrears included)
+    val monthsOwed: Int,         // ✅ how many billing cycles are unpaid
     val cycleStart: String,
     val cycleEnd: String,
     val isCheckedOut: Boolean = false
@@ -26,57 +29,66 @@ class PaymentsViewModel(
     private val residentRepository: ResidentRepository
 ) : BaseHostelViewModel() {
 
-    val residents: StateFlow<List<YetToPayResident>> = hostelFlow(emptyList<YetToPayResident>()) { hostelId ->
-        combine(
-            residentRepository.getAllResidentsWithLatestStay(hostelId),
-            paymentRepository.getAllPaymentsForHostel(hostelId)
-        ) { residents, allPayments ->
-            val today = LocalDate.now()
-            val result = mutableListOf<YetToPayResident>()
+    val residents: StateFlow<List<YetToPayResident>> =
+        hostelFlow(emptyList<YetToPayResident>()) { hostelId ->
+            combine(
+                residentRepository.getAllResidentsWithLatestStay(hostelId),
+                paymentRepository.getAllPaymentsForHostel(hostelId)
+            ) { residents, allPayments ->
+                val today = LocalDate.now()
+                val paymentsByStay = allPayments.groupBy { it.stayId }
+                val result = mutableListOf<YetToPayResident>()
 
-            for (resident in residents) {
-                // ✅ Skip daily guests — they don't have a monthly billing cycle
-                if (resident.dailyRent > 0) continue
+                for (r in residents) {
+                    // Daily guests settle per-day on their own screen, not here.
+                    if (r.dailyRent > 0) continue
 
-                val anchorDay = resident.billingAnchorDay.coerceIn(1, 31)
+                    val ref: LocalDate = if (r.isActive) {
+                        today
+                    } else {
+                        Balance.parseDateOrNull(r.checkoutDate) ?: continue
+                    }
 
-                val cycleStart: LocalDate = if (resident.isActive) {
-                    BillingCycle.cycleStart(today, anchorDay)
-                } else {
-                    val checkoutDate = resident.checkoutDate?.let {
-                        LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
-                    } ?: continue
-                    BillingCycle.cycleStart(checkoutDate, anchorDay)
-                }
-                val cycleEnd = cycleStart.plusMonths(1).minusDays(1)
+                    // Temporary Stay view so ALL balance math lives in Balance.kt
+                    val stay = Stay(
+                        id = r.stayId,
+                        personId = r.personId,
+                        hostelId = hostelId,
+                        roomId = "",
+                        joinDate = r.joinDate,
+                        checkoutDate = r.checkoutDate,
+                        monthlyRent = r.monthlyRent,
+                        billingAnchorDay = r.billingAnchorDay,
+                        isActive = r.isActive
+                    )
 
-                val cycleStartStr = cycleStart.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                val cycleEndStr = cycleEnd.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    val paid = paymentsByStay[r.stayId] ?: emptyList()
+                    val balance = Balance.balancePaise(stay, paid, ref)
 
-                val hasPaymentInCycle = allPayments.any { p ->
-                    p.stayId == resident.stayId &&
-                            p.paymentDate >= cycleStartStr &&
-                            p.paymentDate <= cycleEndStr
-                }
+                    // ✅ Only people who actually owe money appear here now.
+                    if (balance <= 0) continue
 
-                if (!hasPaymentInCycle) {
+                    val anchor = r.billingAnchorDay.coerceIn(1, 31)
+                    val cycleStart = BillingCycle.cycleStart(ref, anchor)
+                    val cycleEnd = cycleStart.plusMonths(1).minusDays(1)
+
                     result.add(
                         YetToPayResident(
-                            personId = resident.personId,
-                            name = resident.name,
-                            phone = resident.phone,
-                            profilePhotoPath = resident.profilePhotoPath,
-                            roomNumber = resident.roomNumber,
-                            monthlyRent = resident.monthlyRent,
-                            cycleStart = cycleStartStr,
-                            cycleEnd = cycleEndStr,
-                            isCheckedOut = !resident.isActive
+                            personId = r.personId,
+                            name = r.name,
+                            phone = r.phone,
+                            profilePhotoPath = r.profilePhotoPath,
+                            roomNumber = r.roomNumber,
+                            monthlyRent = r.monthlyRent,
+                            balancePaise = balance,
+                            monthsOwed = Balance.cyclesOwed(r.joinDate, ref, anchor),
+                            cycleStart = cycleStart.toString(),
+                            cycleEnd = cycleEnd.toString(),
+                            isCheckedOut = !r.isActive
                         )
                     )
                 }
+                result.sortedBy { it.name }
             }
-
-            result.sortedBy { it.name }
         }
-    }
 }

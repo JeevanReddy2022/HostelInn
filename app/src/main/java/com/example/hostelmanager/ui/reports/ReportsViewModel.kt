@@ -22,11 +22,25 @@ data class ExpenseBreakdown(
     val totalPaise: Long
 )
 
+/** One deliberate write-off: who, when, how much, and why. */
+data class WriteOffEntry(
+    val paymentId: String,
+    val personName: String,
+    val roomNumber: String,
+    val date: String,
+    val waivedPaise: Long,
+    val reason: String
+)
+
 data class MonthlyReport(
     val totalIncomePaise: Long,
     val totalExpensePaise: Long,
     val netProfitPaise: Long,
-    val expenseBreakdown: List<ExpenseBreakdown>
+    val expenseBreakdown: List<ExpenseBreakdown>,
+    // ✅ NEW: money deliberately given up this month
+    val writeOffPaise: Long = 0,
+    val writeOffCount: Int = 0,
+    val writeOffs: List<WriteOffEntry> = emptyList()
 )
 
 class ReportsViewModel(
@@ -38,8 +52,9 @@ class ReportsViewModel(
 ) : BaseHostelViewModel() {
 
     private val _selectedMonth = MutableStateFlow(YearMonth.now().toIsoMonth())
-
     val selectedMonth: StateFlow<String> = _selectedMonth
+
+    private val emptyReport = MonthlyReport(0, 0, 0, emptyList())
 
     val report: StateFlow<MonthlyReport> = combine(
         _hostelId,
@@ -48,14 +63,35 @@ class ReportsViewModel(
         Pair(hostelId, month)
     }.flatMapLatest { (hostelId, month) ->
         if (hostelId.isEmpty()) {
-            flowOf(MonthlyReport(0, 0, 0, emptyList()))
+            flowOf(emptyReport)
         } else {
             combine(
                 paymentRepository.getAllPaymentsForHostel(hostelId),
+                paymentRepository.getAllPaymentsWithDetailsForHostel(hostelId),
                 expenseRepository.getAllExpensesForHostel(hostelId)
-            ) { payments, expenses ->
+            ) { payments, paymentsWithDetails, expenses ->
+
                 val monthPayments = payments.filter { it.paymentDate.startsWith(month) }
+
+                // Money totals come from the plain payments table so a deleted
+                // room can never hide income. Names/rooms are only enrichment.
                 val totalIncome = monthPayments.sumOf { it.amountPaise }
+                val detailsById = paymentsWithDetails.associateBy { it.payment.id }
+
+                val writeOffs = monthPayments
+                    .filter { it.waivedPaise > 0 }
+                    .map { p ->
+                        val details = detailsById[p.id]
+                        WriteOffEntry(
+                            paymentId = p.id,
+                            personName = details?.personName ?: "Resident",
+                            roomNumber = details?.roomNumber ?: "—",
+                            date = p.paymentDate,
+                            waivedPaise = p.waivedPaise,
+                            reason = p.note.ifBlank { "No reason recorded" }
+                        )
+                    }
+                    .sortedByDescending { it.waivedPaise }
 
                 val monthExpenses = expenses.filter { it.expenseDate.startsWith(month) }
                 val totalExpense = monthExpenses.sumOf { it.amountPaise }
@@ -71,11 +107,14 @@ class ReportsViewModel(
                     totalIncomePaise = totalIncome,
                     totalExpensePaise = totalExpense,
                     netProfitPaise = totalIncome - totalExpense,
-                    expenseBreakdown = breakdown
+                    expenseBreakdown = breakdown,
+                    writeOffPaise = writeOffs.sumOf { it.waivedPaise },
+                    writeOffCount = writeOffs.size,
+                    writeOffs = writeOffs
                 )
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlyReport(0, 0, 0, emptyList()))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyReport)
 
     fun setMonth(month: String) {
         _selectedMonth.value = month

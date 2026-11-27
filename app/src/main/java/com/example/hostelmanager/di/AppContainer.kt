@@ -6,6 +6,8 @@ import com.example.hostelmanager.data.repository.ExpenseRepository
 import com.example.hostelmanager.data.repository.ExpenseRepositoryImpl
 import com.example.hostelmanager.data.repository.HostelRepository
 import com.example.hostelmanager.data.repository.HostelRepositoryImpl
+import com.example.hostelmanager.data.repository.PaymentEditRepository
+import com.example.hostelmanager.data.repository.PaymentEditRepositoryImpl
 import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.PaymentRepositoryImpl
 import com.example.hostelmanager.data.repository.ResidentRepository
@@ -19,6 +21,7 @@ interface AppContainer {
     val residentRepository: ResidentRepository
     val paymentRepository: PaymentRepository
     val expenseRepository: ExpenseRepository
+    val paymentEditRepository: PaymentEditRepository
 }
 
 class AppContainerImpl(private val context: Context) : AppContainer {
@@ -59,6 +62,15 @@ class AppContainerImpl(private val context: Context) : AppContainer {
     override val expenseRepository: ExpenseRepository by lazy {
         ExpenseRepositoryImpl(
             expenseDao = database.expenseDao()
+        )
+    }
+
+    override val paymentEditRepository: PaymentEditRepository by lazy {
+        PaymentEditRepositoryImpl(
+            database = database,
+            paymentDao = database.paymentDao(),
+            paymentEditDao = database.paymentEditDao(),
+            stayDao = database.stayDao()
         )
     }
 }

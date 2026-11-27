@@ -50,7 +50,8 @@ fun HostelDashboardScreen(
     onPaymentHistoryClick: () -> Unit,
     onAddExpenseClick: () -> Unit,
     onReportsClick: () -> Unit,
-    onDailyGuestsClick: () -> Unit, // NEW
+    onDailyGuestsClick: () -> Unit,
+    onAboutClick: () -> Unit, // ✅ NEW
     onHostelSwitch: (String) -> Unit,
     onAllHostelsClick: () -> Unit,
     hostelViewModel: HostelViewModel = appViewModel()
@@ -95,9 +96,13 @@ fun HostelDashboardScreen(
                         scope.launch { drawerState.close() }
                         onReportsClick()
                     },
-                    onDailyGuestsClick = { // NEW
+                    onDailyGuestsClick = {
                         scope.launch { drawerState.close() }
                         onDailyGuestsClick()
+                    },
+                    onAboutClick = { // ✅ NEW
+                        scope.launch { drawerState.close() }
+                        onAboutClick()
                     },
                     onAllHostelsClick = {
                         scope.launch { drawerState.close() }
@@ -178,7 +183,11 @@ fun HostelDashboardScreen(
 }
 
 @Composable
-private fun DashboardTabContent(hostelId: String, modifier: Modifier = Modifier, viewModel: DashboardViewModel = appViewModel()) {
+private fun DashboardTabContent(
+    hostelId: String,
+    modifier: Modifier = Modifier,
+    viewModel: DashboardViewModel = appViewModel()
+) {
     SideEffect { viewModel.setHostelId(hostelId) }
 
     val stats by viewModel.stats.collectAsStateWithLifecycle()
@@ -221,7 +230,8 @@ private fun DrawerContent(
     onArchivedRoomsClick: () -> Unit,
     onPastResidentsClick: () -> Unit,
     onReportsClick: () -> Unit,
-    onDailyGuestsClick: () -> Unit, // NEW
+    onDailyGuestsClick: () -> Unit,
+    onAboutClick: () -> Unit, // ✅ NEW
     onAllHostelsClick: () -> Unit
 ) {
     Column(
@@ -231,10 +241,19 @@ private fun DrawerContent(
             modifier = Modifier.fillMaxWidth().background(HeaderFooterGradient).padding(20.dp)
         ) {
             Column {
-                Text(text = currentHostel?.name ?: "Hostel", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text = currentHostel?.name ?: "Hostel",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
                 if (currentHostel?.address?.isNotBlank() == true) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = currentHostel.address, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
+                    Text(
+                        text = currentHostel.address,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
                 }
             }
         }
@@ -245,24 +264,48 @@ private fun DrawerContent(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
-        Text(text = "Switch Hostel", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(
+            text = "Switch Hostel",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = AppMuted,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
 
         hostels.forEach { hostel ->
-            DrawerHostelItem(hostel = hostel, isSelected = hostel.id == currentHostel?.id, onClick = { if (hostel.id != currentHostel?.id) onHostelClick(hostel.id) })
+            DrawerHostelItem(
+                hostel = hostel,
+                isSelected = hostel.id == currentHostel?.id,
+                onClick = { if (hostel.id != currentHostel?.id) onHostelClick(hostel.id) }
+            )
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
-        // NEW: Daily Guests Item
         DrawerMenuItem(icon = Icons.Default.Hotel, title = "Daily Guests", onClick = onDailyGuestsClick)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
-        Text(text = "Analytics & Archives", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AppMuted, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(
+            text = "Analytics & Archives",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = AppMuted,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
 
         DrawerMenuItem(icon = Icons.Default.BarChart, title = "Reports", onClick = onReportsClick)
         DrawerMenuItem(icon = Icons.Default.Archive, title = "Archived Rooms", onClick = onArchivedRoomsClick)
-        DrawerMenuItem(painter = painterResource(R.drawable.ic_person_walking_luggage), title = "Checkouts", onClick = onPastResidentsClick)
+        DrawerMenuItem(
+            painter = painterResource(R.drawable.ic_person_walking_luggage),
+            title = "Checkouts",
+            onClick = onPastResidentsClick
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
+
+        // ✅ NEW: About
+        DrawerMenuItem(icon = Icons.Default.Info, title = "About HostelInn", onClick = onAboutClick)
 
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -305,12 +348,25 @@ private fun DrawerHostelItem(hostel: Hostel, isSelected: Boolean, onClick: () ->
             .then(if (isSelected) Modifier.background(AppSoftBlue.copy(alpha = 0.5f)) else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(if (isSelected) AppNavy else AppCard), contentAlignment = Alignment.Center) {
-            Icon(imageVector = Icons.Default.Apartment, contentDescription = null, tint = if (isSelected) Color.White else AppNavy, modifier = Modifier.size(20.dp))
+        Box(
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(if (isSelected) AppNavy else AppCard),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Apartment,
+                contentDescription = null,
+                tint = if (isSelected) Color.White else AppNavy,
+                modifier = Modifier.size(20.dp)
+            )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = hostel.name, style = MaterialTheme.typography.bodyLarge, color = AppText, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            Text(
+                text = hostel.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppText,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
             if (hostel.address.isNotBlank()) {
                 Text(text = hostel.address, style = MaterialTheme.typography.bodySmall, color = AppMuted, maxLines = 1)
             }

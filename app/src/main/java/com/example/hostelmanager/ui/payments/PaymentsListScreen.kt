@@ -36,17 +36,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.util.formatCycle
 import com.example.hostelmanager.util.paiseToRupees
 import com.example.hostelmanager.util.paiseToText
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,24 +54,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.hostelmanager.ui.residents.MessageChoiceDialog
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
+import com.example.hostelmanager.ui.theme.AppGreen
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
+import com.example.hostelmanager.ui.theme.AppOrange
 import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppSoftBlue
+import com.example.hostelmanager.ui.theme.AppSoftOrange
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
 import java.io.File
 import java.net.URLEncoder
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import java.util.Locale
 
 enum class SortOption { NAME, ROOM, AMOUNT }
 
@@ -92,7 +89,7 @@ fun PaymentsListScreen(
         when (sortOption) {
             SortOption.NAME -> residents.sortedBy { it.name }
             SortOption.ROOM -> residents.sortedBy { it.roomNumber }
-            SortOption.AMOUNT -> residents.sortedByDescending { it.monthlyRent }
+            SortOption.AMOUNT -> residents.sortedByDescending { it.balancePaise }
         }
     }
 
@@ -102,7 +99,6 @@ fun PaymentsListScreen(
             .background(AppBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Action buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -111,9 +107,7 @@ fun PaymentsListScreen(
             ) {
                 OutlinedButton(
                     onClick = { onRecordPaymentClick("none") },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.5.dp, AppNavy)
                 ) {
@@ -121,12 +115,10 @@ fun PaymentsListScreen(
                 }
                 Button(
                     onClick = onPaymentHistoryClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF5B82F6), // Light Royal Blue
+                        containerColor = Color(0xFF5B82F6),
                         contentColor = Color.White
                     )
                 ) {
@@ -134,7 +126,6 @@ fun PaymentsListScreen(
                 }
             }
 
-            // Premium Sort Chips
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,42 +134,31 @@ fun PaymentsListScreen(
             ) {
                 SortChip("By Name", sortOption == SortOption.NAME) { sortOption = SortOption.NAME }
                 SortChip("By Room", sortOption == SortOption.ROOM) { sortOption = SortOption.ROOM }
-                SortChip("By Amount", sortOption == SortOption.AMOUNT) { sortOption = SortOption.AMOUNT }
+                SortChip("By Due", sortOption == SortOption.AMOUNT) { sortOption = SortOption.AMOUNT }
             }
 
-            // List or Empty State
             if (sortedResidents.isEmpty()) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
+                    modifier = Modifier.fillMaxSize().padding(20.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(AppSoftBlue),
+                        modifier = Modifier.size(80.dp).clip(CircleShape).background(AppBackground.let { AppSoftBlue }),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            tint = AppNavy,
-                            modifier = Modifier.size(40.dp)
-                        )
+                        Icon(Icons.Default.Person, contentDescription = null, tint = AppNavy, modifier = Modifier.size(40.dp))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "All residents have paid!",
+                        "No pending balances!",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = AppText
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "No one is in the 'Yet to Pay' list.",
+                        "Everyone is fully paid up to today.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = AppMuted
                     )
@@ -205,7 +185,6 @@ fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val backgroundColor = if (selected) AppNavy else AppSoftBlue
     val textColor = if (selected) Color.White else AppNavy
     val fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
@@ -214,12 +193,7 @@ fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            color = textColor,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = fontWeight
-        )
+        Text(text = label, color = textColor, style = MaterialTheme.typography.bodyMedium, fontWeight = fontWeight)
     }
 }
 
@@ -238,29 +212,18 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Photo
             Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(AppSoftBlue),
+                modifier = Modifier.size(52.dp).clip(CircleShape).background(AppSoftBlue),
                 contentAlignment = Alignment.Center
             ) {
                 if (resident.profilePhotoPath.isNullOrBlank()) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = AppNavy,
-                        modifier = Modifier.size(26.dp)
-                    )
+                    Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = AppNavy, modifier = Modifier.size(26.dp))
                 } else {
                     AsyncImage(
-                        model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        model = coil.request.ImageRequest.Builder(context)
                             .data(File(resident.profilePhotoPath))
                             .size(128)
                             .crossfade(true)
@@ -271,10 +234,7 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
                     )
                 }
             }
-
             Spacer(modifier = Modifier.width(14.dp))
-
-            // Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     resident.name,
@@ -283,47 +243,45 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
                     color = AppText
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Room ${resident.roomNumber}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppMuted
-                    )
+                    Text("Room ${resident.roomNumber}", style = MaterialTheme.typography.bodySmall, color = AppMuted)
                     if (resident.isCheckedOut) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(AppSoftRed)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                            modifier = Modifier.clip(RoundedCornerShape(50)).background(AppSoftRed).padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
-                            Text(
-                                "Checked out",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppRed,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text("Checked out", style = MaterialTheme.typography.bodySmall, color = AppRed, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(6.dp))
-
+                // ✅ The real outstanding money, not just one month's rent
                 Text(
-                    resident.monthlyRent.paiseToText(),
+                    resident.balancePaise.paiseToText(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = AppNavy
+                    color = AppRed
                 )
-                Text(
-                    "Due: ${formatCycle(resident.cycleStart, resident.cycleEnd)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppMuted
-                )
+                if (resident.monthsOwed > 1) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(AppSoftOrange).padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            "⚠️ ${resident.monthsOwed} months owed",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppOrange,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                } else {
+                    Text(
+                        "Due: ${formatCycle(resident.cycleStart, resident.cycleEnd)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppMuted
+                    )
+                }
             }
-
-            // Call + Message (These remain separate and won't trigger the card click)
             Column {
                 IconButton(onClick = {
                     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${resident.phone}"))
@@ -343,15 +301,19 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
     }
 
     if (showMessageDialog) {
-        val rentText = resident.monthlyRent.paiseToText()
-
+        val balanceText = resident.balancePaise.paiseToText()
+        val periodText = if (resident.monthsOwed > 1) {
+            "${resident.monthsOwed} months (including arrears)"
+        } else {
+            formatCycle(resident.cycleStart, resident.cycleEnd)
+        }
         MessageChoiceDialog(
             personName = resident.name,
             phone = resident.phone,
-            rentAmount = resident.monthlyRent.paiseToRupees(),
+            rentAmount = resident.balancePaise.paiseToRupees(),
             onDismiss = { showMessageDialog = false },
             onWhatsAppClick = {
-                val message = "Hi ${resident.name},\nPlease pay the rent $rentText for ${formatCycle(resident.cycleStart, resident.cycleEnd)}.\nThanks!"
+                val message = "Hi ${resident.name},\nPlease pay the pending $balanceText for $periodText.\nThanks!"
                 val whatsappNumber = "91${resident.phone}"
                 val encodedMessage = URLEncoder.encode(message, "UTF-8")
                 val whatsappUri = Uri.parse("https://wa.me/$whatsappNumber?text=$encodedMessage")
@@ -364,7 +326,7 @@ fun YetToPayCard(resident: YetToPayResident, onRecordPaymentClick: (String) -> U
                 showMessageDialog = false
             },
             onSmsClick = {
-                val message = "Hi ${resident.name},\nPlease pay the rent $rentText for ${formatCycle(resident.cycleStart, resident.cycleEnd)}.\nThanks!"
+                val message = "Hi ${resident.name},\nPlease pay the pending $balanceText for $periodText.\nThanks!"
                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${resident.phone}"))
                 intent.putExtra("sms_body", message)
                 try {

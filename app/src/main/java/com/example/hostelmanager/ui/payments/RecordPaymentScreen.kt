@@ -1,8 +1,10 @@
 package com.example.hostelmanager.ui.payments
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,12 +47,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.data.ResidentWithRoom
 import com.example.hostelmanager.di.appViewModel
@@ -63,12 +67,15 @@ import com.example.hostelmanager.ui.components.appTextFieldColors
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
+import com.example.hostelmanager.ui.theme.AppGreen
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
 import com.example.hostelmanager.ui.theme.AppOnNavy
 import com.example.hostelmanager.ui.theme.AppOrange
+import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftOrange
+import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
 import com.example.hostelmanager.util.paiseToRupees
 import com.example.hostelmanager.util.paiseToText
@@ -91,6 +98,7 @@ fun RecordPaymentScreen(
 ) {
     LaunchedEffect(hostelId) { viewModel.setHostelId(hostelId) }
     val allResidents by viewModel.residents.collectAsStateWithLifecycle()
+    val checkedOutIds by viewModel.checkedOutPersonIds.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
 
     var searchQuery by remember { mutableStateOf("") }
@@ -106,31 +114,34 @@ fun RecordPaymentScreen(
         mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
     }
     var note by remember { mutableStateOf("") }
+    var currentBalance by remember { mutableStateOf<Long?>(null) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    var showConfirmDialog by remember { mutableStateOf(false) }
-
+    // Finds checked-out people too, because the ViewModel now lists active + past.
     LaunchedEffect(prefilledPersonId, allResidents) {
         if (prefilledPersonId.isNotEmpty() && prefilledPersonId != "none" && selectedResident == null) {
             selectedResident = allResidents.find { it.person.id == prefilledPersonId }
         }
     }
 
-    val filteredResidents = if (searchQuery.length < 2) {
-        emptyList()
-    } else {
+    val filteredResidents = if (searchQuery.length < 2) emptyList() else {
         allResidents.filter { resident ->
             resident.person.name.contains(searchQuery, ignoreCase = true) ||
                     resident.person.phone.contains(searchQuery) ||
                     resident.roomNumber.contains(searchQuery, ignoreCase = true)
-        }.take(5)
+        }.take(6)
     }
 
+    // ✅ balanceForStay (not balanceForPerson) — works for closed stays too.
     LaunchedEffect(selectedResident, prefilledAmountPaise) {
-        val resident = selectedResident
-        if (resident != null && amount.isEmpty()) {
+        val resident = selectedResident ?: return@LaunchedEffect
+        currentBalance = viewModel.balanceForStay(resident.stayId)
+        if (amount.isEmpty()) {
+            val balance = currentBalance ?: 0L
             amount = when {
                 prefilledAmountPaise > 0 -> prefilledAmountPaise.paiseToRupees().toString()
+                balance > 0 -> balance.paiseToRupees().toString()
                 resident.dailyRent > 0 -> resident.dailyRent.paiseToRupees().toString()
                 else -> resident.monthlyRent.paiseToRupees().toString()
             }
@@ -138,12 +149,13 @@ fun RecordPaymentScreen(
     }
 
     val isDailyGuest = (selectedResident?.dailyRent ?: 0L) > 0
-
-    // ✅ ₹0 is a deliberate write-off, not an accident.
+    val isCheckedOut = selectedResident?.person?.id?.let { it in checkedOutIds } ?: false
     val isWriteOff = amount.trim().toLongOrNull() == 0L
 
+    // Cap respects arrears, so a checked-out resident owing 2 months can be cleared.
+    val balanceRupees = (currentBalance ?: 0L).coerceAtLeast(0L).paiseToRupees()
     val rentRupees = selectedResident?.monthlyRent?.paiseToRupees() ?: 0L
-    val maxAllowed = rentRupees + PENDING_BUFFER_RUPEES
+    val maxAllowed = maxOf(balanceRupees, rentRupees) + PENDING_BUFFER_RUPEES
 
     val amountErr = AmountRules.validateAmount(
         rawRupees = amount,
@@ -151,13 +163,12 @@ fun RecordPaymentScreen(
         minRupees = 0,
         maxRupees = if (selectedResident != null && !isDailyGuest) maxAllowed else null
     )
-    // ✅ Reason is mandatory for a write-off, minimum 5 characters.
     val reasonErr = if (isWriteOff && note.trim().length < MIN_WRITE_OFF_REASON) {
         "A reason of at least $MIN_WRITE_OFF_REASON characters is required for a ₹0 write-off."
     } else null
-
     val paymentDateErr = DateRules.validateDate(paymentDate, "Payment date", notFuture = true)
     val recordedDateErr = DateRules.validateDate(recordedDate, "Recorded date", notFuture = true)
+
     val isFormValid = selectedResident != null && amountErr == null && reasonErr == null &&
             paymentDateErr == null && recordedDateErr == null
 
@@ -209,9 +220,11 @@ fun RecordPaymentScreen(
                             filteredResidents.forEach { resident ->
                                 ResidentSearchResult(
                                     resident = resident,
+                                    isCheckedOut = resident.person.id in checkedOutIds,
                                     onClick = {
                                         selectedResident = resident
                                         searchQuery = ""
+                                        amount = ""
                                     }
                                 )
                             }
@@ -225,6 +238,7 @@ fun RecordPaymentScreen(
                         .clickable {
                             selectedResident = null
                             amount = ""
+                            currentBalance = null
                         },
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = AppSoftBlue),
@@ -247,6 +261,36 @@ fun RecordPaymentScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = AppMuted
                             )
+                            if (isCheckedOut) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(AppSoftRed)
+                                        .padding(horizontal = 9.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        "Checked out — settling final balance",
+                                        fontSize = 11.sp,
+                                        color = AppRed,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            val bal = currentBalance
+                            if (bal != null) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    when {
+                                        bal > 0 -> "Balance: ${bal.paiseToText()}"
+                                        bal < 0 -> "Credit: ${(-bal).paiseToText()}"
+                                        else -> "Fully settled"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (bal > 0) AppOrange else AppGreen,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
@@ -261,6 +305,7 @@ fun RecordPaymentScreen(
                             IconButton(onClick = {
                                 selectedResident = null
                                 amount = ""
+                                currentBalance = null
                             }) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear", tint = AppNavy)
                             }
@@ -271,7 +316,7 @@ fun RecordPaymentScreen(
 
             ValidatedTextField(
                 value = amount,
-                onValueChange = { input -> amount = input.filter { it.isDigit() } },
+                onValueChange = { input -> amount = input.filter { it.isDigit() }.take(9) },
                 label = "Amount (₹) *  — enter 0 to write off",
                 error = amountErr,
                 keyboardType = KeyboardType.Number,
@@ -279,7 +324,6 @@ fun RecordPaymentScreen(
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
             )
 
-            // ✅ Warn clearly so ₹0 is never entered by mistake.
             if (isWriteOff) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -287,8 +331,9 @@ fun RecordPaymentScreen(
                     colors = CardDefaults.cardColors(containerColor = AppSoftOrange)
                 ) {
                     Text(
-                        "This will be saved as a WRITE-OFF of the pending balance. " +
-                                "No money is recorded as collected. A reason is required.",
+                        "This will write off the current balance" +
+                                (currentBalance?.takeIf { it > 0 }?.let { " of ${it.paiseToText()}" } ?: "") +
+                                ". No money is recorded as collected. A reason is required.",
                         modifier = Modifier.padding(14.dp),
                         color = AppOrange,
                         style = MaterialTheme.typography.bodyMedium,
@@ -332,10 +377,7 @@ fun RecordPaymentScreen(
                     paymentModes.forEach { mode ->
                         DropdownMenuItem(
                             text = { Text(mode) },
-                            onClick = {
-                                selectedMode = mode
-                                expandedMode = false
-                            }
+                            onClick = { selectedMode = mode; expandedMode = false }
                         )
                     }
                 }
@@ -394,26 +436,21 @@ fun RecordPaymentScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     DetailRow("Resident", resident.person.name)
                     DetailRow("Room", resident.roomNumber)
+                    if (isCheckedOut) DetailRow("Status", "Checked out")
                     DetailRow("Amount", if (isWriteOff) "₹0 (write-off)" else amountPaise.paiseToText())
                     DetailRow("Mode", selectedMode)
                     DetailRow("Date", paymentDate)
                     if (note.isNotBlank()) DetailRow(if (isWriteOff) "Reason" else "Note", note.trim())
-                    if (isWriteOff) {
-                        Text(
-                            "The bed can now be checked out, but no income is recorded.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppOrange,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     showConfirmDialog = false
                     scope.launch {
+                        // ✅ stayId is now passed explicitly
                         val success = viewModel.recordPayment(
                             personId = resident.person.id,
+                            stayId = resident.stayId,
                             amountPaise = amountPaise,
                             mode = selectedMode,
                             paymentDate = paymentDate,
@@ -442,6 +479,7 @@ fun RecordPaymentScreen(
 @Composable
 private fun ResidentSearchResult(
     resident: ResidentWithRoom,
+    isCheckedOut: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -452,7 +490,7 @@ private fun ResidentSearchResult(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(resident.person.name, fontWeight = FontWeight.Bold, color = AppText)
             Text(
                 "Phone: ${resident.person.phone}",
@@ -460,6 +498,19 @@ private fun ResidentSearchResult(
                 color = AppMuted
             )
         }
-        Text("Room ${resident.roomNumber}", fontWeight = FontWeight.SemiBold, color = AppNavy)
+        Column(horizontalAlignment = Alignment.End) {
+            Text("Room ${resident.roomNumber}", fontWeight = FontWeight.SemiBold, color = AppNavy)
+            if (isCheckedOut) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(AppSoftRed)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text("Checked out", fontSize = 10.sp, color = AppRed, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }

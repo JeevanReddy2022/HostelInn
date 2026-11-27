@@ -18,6 +18,7 @@ import java.time.LocalDate
 
 open class FakeResidentRepository : ResidentRepository {
     var activeStay: Stay? = null
+
     var person: Person? = null
     override fun getAllPersons(): Flow<List<Person>> = flowOf(emptyList())
     override suspend fun getPersonById(id: String): Person? = person
@@ -31,6 +32,7 @@ open class FakeResidentRepository : ResidentRepository {
     override fun getActiveStaysByHostel(hostelId: String): Flow<List<Stay>> = flowOf(emptyList())
     override fun getActiveStayByPerson(personId: String): Flow<Stay?> = flowOf(activeStay)
     override suspend fun getActiveStayForPerson(personId: String): Stay? = activeStay
+    override suspend fun getStayById(id: String): Stay? = if (activeStay?.id == id) activeStay else null
     override suspend fun isPhoneDuplicate(phone: String, excludePersonId: String?): Boolean = false
     override suspend fun isGovtIdDuplicate(govtId: String, excludePersonId: String?): Boolean = false
     override suspend fun isEmergencyDuplicate(emergency: String, excludePersonId: String?): Boolean = false
@@ -67,6 +69,8 @@ open class FakeRoomRepository : RoomRepository {
 open class FakePaymentRepository : PaymentRepository {
     var totalPaidOnce: Long = 0L
     var writeOffCount: Int = 0
+    var stayPayments: List<Payment> = emptyList()
+
     override suspend fun insertPayment(payment: Payment) {}
     override suspend fun deletePayment(id: String) {}
     override fun getPaymentsForStay(stayId: String): Flow<List<Payment>> = flowOf(emptyList())
@@ -81,8 +85,22 @@ open class FakePaymentRepository : PaymentRepository {
     override fun getAllPaymentsWithDetailsForHostel(hostelId: String): Flow<List<PaymentWithDetails>> = flowOf(emptyList())
     override suspend fun getPaymentsInCycle(stayId: String, cycleStart: String, cycleEnd: String): List<Payment> = emptyList()
     override fun getTotalPaidForStay(stayId: String): Flow<Long> = flowOf(totalPaidOnce)
-    override suspend fun getTotalPaidForStayOnce(stayId: String): Long = totalPaidOnce
-    override suspend fun countWriteOffsInRange(stayId: String, startDate: String, endDate: String): Int = writeOffCount
+    override suspend fun getTotalPaidForStayOnce(stayId: String): Long = stayPayments.filter { it.stayId == stayId }.sumOf { it.amountPaise }
+    override suspend fun countWriteOffsInRange(stayId: String, startDate: String, endDate: String): Int =
+        stayPayments.count { it.stayId == stayId && it.amountPaise == 0L && it.note.trim().length >= 5 && it.paymentDate >= startDate && it.paymentDate <= endDate }
+    override suspend fun getPaymentsForStayOnce(stayId: String): List<Payment> {
+        if (stayPayments.isNotEmpty()) {
+            return stayPayments.filter { it.stayId == stayId }
+        }
+        val list = mutableListOf<Payment>()
+        if (totalPaidOnce > 0) {
+            list.add(Payment(id = "p_paid", stayId = stayId, personId = "p1", hostelId = "h1", amountPaise = totalPaidOnce, mode = "Cash", paymentDate = "2026-02-01", date = "2026-02-01"))
+        }
+        if (writeOffCount > 0) {
+            list.add(Payment(id = "p_waived", stayId = stayId, personId = "p1", hostelId = "h1", amountPaise = 0, waivedPaise = 10_000_000L, mode = "Cash", paymentDate = "2026-02-01", date = "2026-02-01", note = "Waived balance"))
+        }
+        return list
+    }
     override suspend fun getUnpaidResidentsForHostel(
         hostelId: String,
         allResidents: List<ResidentWithStayInfo>,

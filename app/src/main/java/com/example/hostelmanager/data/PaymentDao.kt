@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,11 +12,21 @@ interface PaymentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPayment(payment: Payment)
 
+    // ✅ NEW: needed by the audited edit path
+    @Update
+    suspend fun updatePayment(payment: Payment)
+
+    @Query("SELECT * FROM payments WHERE id = :id")
+    suspend fun getPaymentById(id: String): Payment?
+
     @Query("DELETE FROM payments WHERE id = :id")
     suspend fun deletePayment(id: String)
 
     @Query("SELECT * FROM payments WHERE stayId = :stayId ORDER BY paymentDate DESC")
     fun getPaymentsForStay(stayId: String): Flow<List<Payment>>
+
+    @Query("SELECT * FROM payments WHERE stayId = :stayId")
+    suspend fun getPaymentsForStayOnce(stayId: String): List<Payment>
 
     @Query("SELECT * FROM payments WHERE personId = :personId ORDER BY paymentDate DESC")
     fun getPaymentsForPerson(personId: String): Flow<List<Payment>>
@@ -29,28 +40,16 @@ interface PaymentDao {
     @Query("SELECT COALESCE(SUM(amountPaise), 0) FROM payments WHERE hostelId = :hostelId")
     fun getTotalPaymentsForHostel(hostelId: String): Flow<Long>
 
-    @Query("""
-        SELECT COUNT(*) FROM payments
-        WHERE hostelId = :hostelId AND paymentDate LIKE :monthPattern
-    """)
+    @Query("SELECT COUNT(*) FROM payments WHERE hostelId = :hostelId AND paymentDate LIKE :monthPattern")
     fun getPaymentsCountForMonth(hostelId: String, monthPattern: String): Flow<Int>
 
-    @Query("""
-        SELECT COALESCE(SUM(amountPaise), 0) FROM payments
-        WHERE hostelId = :hostelId AND paymentDate LIKE :monthPattern
-    """)
+    @Query("SELECT COALESCE(SUM(amountPaise), 0) FROM payments WHERE hostelId = :hostelId AND paymentDate LIKE :monthPattern")
     fun getTotalRentCollected(hostelId: String, monthPattern: String): Flow<Long>
 
-    @Query("""
-        SELECT COALESCE(SUM(amountPaise), 0) FROM payments
-        WHERE hostelId = :hostelId AND paymentDate = :date
-    """)
+    @Query("SELECT COALESCE(SUM(amountPaise), 0) FROM payments WHERE hostelId = :hostelId AND paymentDate = :date")
     fun getTotalPaymentsForDate(hostelId: String, date: String): Flow<Long>
 
-    @Query("""
-        SELECT COALESCE(SUM(amountPaise), 0) FROM payments
-        WHERE hostelId = :hostelId AND paymentDate BETWEEN :startDate AND :endDate
-    """)
+    @Query("SELECT COALESCE(SUM(amountPaise), 0) FROM payments WHERE hostelId = :hostelId AND paymentDate BETWEEN :startDate AND :endDate")
     fun getTotalPaymentsBetween(hostelId: String, startDate: String, endDate: String): Flow<Long>
 
     @Query("""
@@ -82,8 +81,6 @@ interface PaymentDao {
     @Query("SELECT COALESCE(SUM(amountPaise), 0) FROM payments WHERE stayId = :stayId")
     suspend fun getTotalPaidForStayOnce(stayId: String): Long
 
-    // ✅ NEW: a deliberate write-off = ₹0 + a real reason (min 5 chars), inside the period.
-    // The LENGTH check mirrors the form rule, so a short reason can never unlock checkout.
     @Query("""
         SELECT COUNT(*) FROM payments
         WHERE stayId = :stayId

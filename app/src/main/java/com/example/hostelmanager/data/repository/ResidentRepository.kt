@@ -25,7 +25,9 @@ interface ResidentRepository {
     fun getActiveStayByPerson(personId: String): Flow<Stay?>
     suspend fun getActiveStayForPerson(personId: String): Stay?
 
-    // NEW
+    // ✅ NEW: any stay by id — active OR closed. Needed to settle a checked-out resident.
+    suspend fun getStayById(id: String): Stay?
+
     fun getDailyGuestsByHostel(hostelId: String): Flow<List<ResidentWithRoom>>
     fun getNoticeResidentsByHostel(hostelId: String): Flow<List<ResidentWithRoom>>
 
@@ -59,7 +61,9 @@ class ResidentRepositoryImpl(
     override fun getActiveStayByPerson(personId: String): Flow<Stay?> = stayDao.getActiveStayByPerson(personId)
     override suspend fun getActiveStayForPerson(personId: String): Stay? = stayDao.getActiveStayForPerson(personId)
 
-    // NEW
+    // ✅ NEW
+    override suspend fun getStayById(id: String): Stay? = stayDao.getStayById(id)
+
     override fun getDailyGuestsByHostel(hostelId: String): Flow<List<ResidentWithRoom>> = personDao.getDailyGuestsByHostel(hostelId)
     override fun getNoticeResidentsByHostel(hostelId: String): Flow<List<ResidentWithRoom>> = personDao.getNoticeResidentsByHostel(hostelId)
 

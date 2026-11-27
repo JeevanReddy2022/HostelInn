@@ -1,5 +1,6 @@
 package com.example.hostelmanager.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -25,8 +26,14 @@ data class Payment(
     val hostelId: String,
     val amountPaise: Long,
     val mode: String,
-    val paymentDate: String,   // NEW: when money was actually received
-    val date: String,          // Now semantically = when payment was recorded in app
+    val paymentDate: String,
+    val date: String,
     val note: String = "",
+    @ColumnInfo(defaultValue = "0")
+    val waivedPaise: Long = 0,
+    // ✅ NEW: audit markers. The full before/after history lives in payment_edits.
+    @ColumnInfo(defaultValue = "0")
+    val editCount: Int = 0,
+    val lastEditedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

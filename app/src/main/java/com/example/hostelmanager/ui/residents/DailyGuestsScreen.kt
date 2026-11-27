@@ -42,7 +42,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,29 +90,6 @@ fun DailyGuestsScreen(
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var currentGuest by remember { mutableStateOf<ResidentWithRoom?>(null) }
-
-    var totalPaid by remember { mutableStateOf(0L) }
-    var isWrittenOff by remember { mutableStateOf(false) }
-
-    // Live money total while the sheet is open
-    LaunchedEffect(currentGuest?.stayId) {
-        val stayId = currentGuest?.stayId
-        if (!stayId.isNullOrEmpty()) {
-            viewModel.getTotalPaid(stayId).collect { totalPaid = it }
-        }
-    }
-
-    // ✅ Re-check the write-off flag every time the sheet opens
-    LaunchedEffect(showBottomSheet, currentGuest?.stayId) {
-        if (!showBottomSheet) return@LaunchedEffect
-        val guest = currentGuest ?: return@LaunchedEffect
-        if (guest.stayId.isEmpty()) return@LaunchedEffect
-        isWrittenOff = viewModel.hasWriteOff(
-            guest.stayId,
-            guest.joinDate,
-            LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        )
-    }
 
     Scaffold(
         containerColor = AppBackground,
@@ -171,6 +147,8 @@ fun DailyGuestsScreen(
                     DailyGuestCard(
                         guest = guest,
                         onClick = {
+                            // ✅ Tell ViewModel to start tracking this guest's balance
+                            viewModel.selectGuest(guest.stayId, guest.dailyRent, guest.joinDate)
                             currentGuest = guest
                             showBottomSheet = true
                         }
@@ -182,6 +160,10 @@ fun DailyGuestsScreen(
 
     if (showBottomSheet && currentGuest != null) {
         val guest = currentGuest!!
+
+        // ✅ Read balance directly from the reactive flow (no glitching)
+        val balance by viewModel.balance.collectAsStateWithLifecycle()
+
         val today = LocalDate.now()
         val daysStayed = try {
             ChronoUnit.DAYS.between(
@@ -191,10 +173,7 @@ fun DailyGuestsScreen(
         } catch (e: Exception) { 1L }.coerceAtLeast(1L)
 
         val totalDuePaise = daysStayed * guest.dailyRent
-        val balanceDue = totalDuePaise - totalPaid
-
-        // ✅ SAME RULE AS THE CHECKOUT GATE: paid in full OR written off
-        val isSettled = balanceDue <= 0 || isWrittenOff
+        val isSettled = balance <= 0
 
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
@@ -231,22 +210,21 @@ fun DailyGuestsScreen(
                             Text("Total Due", color = AppNavy, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             Text(totalDuePaise.paiseToText(), color = AppNavy, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Already Paid", color = AppGreen, fontWeight = FontWeight.Medium)
-                            Text(totalPaid.paiseToText(), color = AppGreen, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // ✅ Live balance row
+                        val (balLabel, balColor) = when {
+                            balance > 0 -> "Balance Due" to AppOrange
+                            balance < 0 -> "Credit" to AppGreen
+                            else -> "Fully Settled" to AppGreen
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Balance Due", color = if (balanceDue <= 0) AppGreen else AppOrange, fontWeight = FontWeight.Bold)
-                            Text(balanceDue.paiseToText(), color = if (balanceDue <= 0) AppGreen else AppOrange, fontWeight = FontWeight.Bold)
-                        }
-                        if (isWrittenOff && balanceDue > 0) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Write-off", color = AppOrange, fontWeight = FontWeight.Bold)
-                                Text("Recorded ✓", color = AppOrange, fontWeight = FontWeight.Bold)
-                            }
+                            Text(balLabel, color = balColor, fontWeight = FontWeight.Bold)
+                            Text(
+                                if (balance == 0L) "₹0" else "${if (balance < 0) "-" else ""}${kotlin.math.abs(balance).paiseToText()}",
+                                color = balColor,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -270,7 +248,7 @@ fun DailyGuestsScreen(
                 Button(
                     onClick = {
                         showBottomSheet = false
-                        onRecordPaymentClick(guest.person.id, balanceDue.coerceAtLeast(0L))
+                        onRecordPaymentClick(guest.person.id, balance.coerceAtLeast(0L))
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
@@ -279,7 +257,7 @@ fun DailyGuestsScreen(
                     Icon(Icons.Default.Payments, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        if (balanceDue > 0) "Record Payment (${balanceDue.paiseToText()})"
+                        if (balance > 0) "Record Payment (${balance.paiseToText()})"
                         else "Record Extra Payment",
                         fontWeight = FontWeight.Bold
                     )
@@ -300,11 +278,7 @@ fun DailyGuestsScreen(
                     )
                 ) {
                     Text(
-                        when {
-                            isSettled && isWrittenOff && balanceDue > 0 -> "Check Out (Written Off)"
-                            isSettled -> "Check Out & Settle"
-                            else -> "Settle Balance First"
-                        },
+                        if (isSettled) "Check Out & Settle" else "Settle Balance First",
                         fontWeight = FontWeight.Bold
                     )
                 }

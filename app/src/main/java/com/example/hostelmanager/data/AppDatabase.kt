@@ -8,8 +8,11 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Hostel::class, RoomEntity::class, Person::class, Stay::class, Payment::class, Expense::class],
-    version = 12,
+    entities = [
+        Hostel::class, RoomEntity::class, Person::class,
+        Stay::class, Payment::class, Expense::class, PaymentEdit::class
+    ],
+    version = 14,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -19,6 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stayDao(): StayDao
     abstract fun paymentDao(): PaymentDao
     abstract fun expenseDao(): ExpenseDao
+    abstract fun paymentEditDao(): PaymentEditDao
 
     companion object {
         @Volatile
@@ -68,11 +72,47 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_payments_paymentDate ON payments(paymentDate)")
             }
         }
-        // NEW: Migration for Daily Rent and Notice Date
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE stays ADD COLUMN dailyRent INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE stays ADD COLUMN noticeDate TEXT")
+            }
+        }
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE payments ADD COLUMN waivedPaise INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        // ✅ NEW: edit markers + append-only audit table
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE payments ADD COLUMN editCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE payments ADD COLUMN lastEditedAt INTEGER")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `payment_edits` (
+                        `id` TEXT NOT NULL,
+                        `paymentId` TEXT NOT NULL,
+                        `editedAt` INTEGER NOT NULL,
+                        `reason` TEXT NOT NULL,
+                        `amountBefore` INTEGER NOT NULL,
+                        `amountAfter` INTEGER NOT NULL,
+                        `waivedBefore` INTEGER NOT NULL,
+                        `waivedAfter` INTEGER NOT NULL,
+                        `modeBefore` TEXT NOT NULL,
+                        `modeAfter` TEXT NOT NULL,
+                        `paymentDateBefore` TEXT NOT NULL,
+                        `paymentDateAfter` TEXT NOT NULL,
+                        `recordedDateBefore` TEXT NOT NULL,
+                        `recordedDateAfter` TEXT NOT NULL,
+                        `noteBefore` TEXT NOT NULL,
+                        `noteAfter` TEXT NOT NULL,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`paymentId`) REFERENCES `payments`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_payment_edits_paymentId` ON `payment_edits` (`paymentId`)")
             }
         }
 
@@ -86,7 +126,8 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
-                        MIGRATION_10_11, MIGRATION_11_12
+                        MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+                        MIGRATION_13_14
                     )
                     .fallbackToDestructiveMigrationFrom(1, 2, 3)
                     .build()

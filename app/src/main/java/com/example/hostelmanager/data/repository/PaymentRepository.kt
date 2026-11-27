@@ -15,6 +15,10 @@ interface PaymentRepository {
     suspend fun insertPayment(payment: Payment)
     suspend fun deletePayment(id: String)
     fun getPaymentsForStay(stayId: String): Flow<List<Payment>>
+
+    // ✅ NEW (ledger): one-shot read of all payments on a stay, for balance math
+    suspend fun getPaymentsForStayOnce(stayId: String): List<Payment>
+
     fun getPaymentsForPerson(personId: String): Flow<List<Payment>>
     fun getAllPaymentsForHostel(hostelId: String): Flow<List<Payment>>
     fun getPaymentsBetween(startDate: String, endDate: String): Flow<List<Payment>>
@@ -25,11 +29,8 @@ interface PaymentRepository {
     fun getTotalPaymentsBetween(hostelId: String, startDate: String, endDate: String): Flow<Long>
     fun getAllPaymentsWithDetailsForHostel(hostelId: String): Flow<List<PaymentWithDetails>>
     suspend fun getPaymentsInCycle(stayId: String, cycleStart: String, cycleEnd: String): List<Payment>
-
     fun getTotalPaidForStay(stayId: String): Flow<Long>
     suspend fun getTotalPaidForStayOnce(stayId: String): Long
-
-    // ✅ NEW
     suspend fun countWriteOffsInRange(stayId: String, startDate: String, endDate: String): Int
 
     suspend fun getUnpaidResidentsForHostel(
@@ -45,25 +46,37 @@ class PaymentRepositoryImpl(
 
     override suspend fun insertPayment(payment: Payment) = paymentDao.insertPayment(payment)
     override suspend fun deletePayment(id: String) = paymentDao.deletePayment(id)
-    override fun getPaymentsForStay(stayId: String): Flow<List<Payment>> = paymentDao.getPaymentsForStay(stayId)
-    override fun getPaymentsForPerson(personId: String): Flow<List<Payment>> = paymentDao.getPaymentsForPerson(personId)
-    override fun getAllPaymentsForHostel(hostelId: String): Flow<List<Payment>> = paymentDao.getAllPaymentsForHostel(hostelId)
-    override fun getPaymentsBetween(startDate: String, endDate: String): Flow<List<Payment>> = paymentDao.getPaymentsBetween(startDate, endDate)
-    override fun getTotalPaymentsForHostel(hostelId: String): Flow<Long> = paymentDao.getTotalPaymentsForHostel(hostelId)
-    override fun getPaymentsCountForMonth(hostelId: String, monthPattern: String): Flow<Int> = paymentDao.getPaymentsCountForMonth(hostelId, monthPattern)
-    override fun getTotalRentCollected(hostelId: String, monthPattern: String): Flow<Long> = paymentDao.getTotalRentCollected(hostelId, monthPattern)
-    override fun getTotalPaymentsForDate(hostelId: String, date: String): Flow<Long> = paymentDao.getTotalPaymentsForDate(hostelId, date)
-    override fun getTotalPaymentsBetween(hostelId: String, startDate: String, endDate: String): Flow<Long> = paymentDao.getTotalPaymentsBetween(hostelId, startDate, endDate)
-    override fun getAllPaymentsWithDetailsForHostel(hostelId: String): Flow<List<PaymentWithDetails>> = paymentDao.getAllPaymentsWithDetailsForHostel(hostelId)
-    override suspend fun getPaymentsInCycle(stayId: String, cycleStart: String, cycleEnd: String): List<Payment> = paymentDao.getPaymentsInCycle(stayId, cycleStart, cycleEnd)
+    override fun getPaymentsForStay(stayId: String): Flow<List<Payment>> =
+        paymentDao.getPaymentsForStay(stayId)
 
+    // ✅ NEW (ledger)
+    override suspend fun getPaymentsForStayOnce(stayId: String): List<Payment> =
+        paymentDao.getPaymentsForStayOnce(stayId)
+
+    override fun getPaymentsForPerson(personId: String): Flow<List<Payment>> =
+        paymentDao.getPaymentsForPerson(personId)
+    override fun getAllPaymentsForHostel(hostelId: String): Flow<List<Payment>> =
+        paymentDao.getAllPaymentsForHostel(hostelId)
+    override fun getPaymentsBetween(startDate: String, endDate: String): Flow<List<Payment>> =
+        paymentDao.getPaymentsBetween(startDate, endDate)
+    override fun getTotalPaymentsForHostel(hostelId: String): Flow<Long> =
+        paymentDao.getTotalPaymentsForHostel(hostelId)
+    override fun getPaymentsCountForMonth(hostelId: String, monthPattern: String): Flow<Int> =
+        paymentDao.getPaymentsCountForMonth(hostelId, monthPattern)
+    override fun getTotalRentCollected(hostelId: String, monthPattern: String): Flow<Long> =
+        paymentDao.getTotalRentCollected(hostelId, monthPattern)
+    override fun getTotalPaymentsForDate(hostelId: String, date: String): Flow<Long> =
+        paymentDao.getTotalPaymentsForDate(hostelId, date)
+    override fun getTotalPaymentsBetween(hostelId: String, startDate: String, endDate: String): Flow<Long> =
+        paymentDao.getTotalPaymentsBetween(hostelId, startDate, endDate)
+    override fun getAllPaymentsWithDetailsForHostel(hostelId: String): Flow<List<PaymentWithDetails>> =
+        paymentDao.getAllPaymentsWithDetailsForHostel(hostelId)
+    override suspend fun getPaymentsInCycle(stayId: String, cycleStart: String, cycleEnd: String): List<Payment> =
+        paymentDao.getPaymentsInCycle(stayId, cycleStart, cycleEnd)
     override fun getTotalPaidForStay(stayId: String): Flow<Long> =
         paymentDao.getTotalPaidForStay(stayId)
-
     override suspend fun getTotalPaidForStayOnce(stayId: String): Long =
         paymentDao.getTotalPaidForStayOnce(stayId)
-
-    // ✅ NEW
     override suspend fun countWriteOffsInRange(stayId: String, startDate: String, endDate: String): Int =
         paymentDao.countWriteOffsInRange(stayId, startDate, endDate)
 

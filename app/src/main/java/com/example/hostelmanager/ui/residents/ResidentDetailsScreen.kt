@@ -61,15 +61,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.hostelmanager.data.Payment
+import com.example.hostelmanager.domain.validation.DateRules
+import com.example.hostelmanager.ui.components.AppDateField
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
 import com.example.hostelmanager.ui.theme.AppGreen
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
+import com.example.hostelmanager.ui.theme.AppOrange
 import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftGreen
@@ -94,16 +96,17 @@ fun ResidentDetailsScreen(
     LaunchedEffect(personId) {
         viewModel.setPersonId(personId)
     }
-
     val person by viewModel.person.collectAsStateWithLifecycle()
     val activeStay by viewModel.activeStay.collectAsStateWithLifecycle()
     val room by viewModel.room.collectAsStateWithLifecycle()
     val payments by viewModel.payments.collectAsStateWithLifecycle()
+    val balance by viewModel.balance.collectAsStateWithLifecycle() // ✅ NEW
     val context = LocalContext.current
 
     var showEditConfirmDialog by remember { mutableStateOf(false) }
     var showMessageDialog by remember { mutableStateOf(false) }
     var paymentToDelete by remember { mutableStateOf<Payment?>(null) }
+    var showNoticeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = AppBackground,
@@ -160,7 +163,6 @@ fun ResidentDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             val currentPerson = person
-
             if (currentPerson == null) {
                 Text("Loading…", style = MaterialTheme.typography.bodyMedium, color = AppMuted)
             } else {
@@ -211,7 +213,6 @@ fun ResidentDetailsScreen(
                 PremiumCard {
                     SectionHeader("Stay Details", topPadding = 4.dp)
                     Spacer(modifier = Modifier.height(10.dp))
-
                     if (stay == null) {
                         Box(
                             modifier = Modifier
@@ -234,8 +235,64 @@ fun ResidentDetailsScreen(
                         DetailRow("Join Date", stay.joinDate, weighted = true)
                         DetailRow("Deposit", stay.depositCollected.paiseToText(), weighted = true)
 
+                        // ✅ Live balance row
+                        val (balLabel, balColor) = when {
+                            balance > 0 -> "Balance Due" to AppRed
+                            balance < 0 -> "Credit" to AppGreen
+                            else -> "Status" to AppMuted
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(balLabel, style = MaterialTheme.typography.bodyMedium, color = AppMuted, modifier = Modifier.weight(0.4f))
+                            Text(
+                                if (balance == 0L) "Fully Settled" else "${if (balance < 0) "-" else ""}${kotlin.math.abs(balance).paiseToText()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = balColor,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(0.6f)
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Notice block
+                        if (stay.noticeDate.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = { showNoticeDialog = true },
+                                modifier = Modifier.fillMaxWidth().height(44.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.5.dp, AppNavy),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = AppNavy
+                                )
+                            ) {
+                                Text("Give Notice (planned check-out)", fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Notice given: leaves ${stay.noticeDate}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = AppOrange,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                TextButton(onClick = { viewModel.cancelNotice() }) {
+                                    Text("Cancel", color = AppMuted)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
                         OutlinedButton(
                             onClick = onTransferClick,
                             modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -248,9 +305,7 @@ fun ResidentDetailsScreen(
                         ) {
                             Text("Transfer Room", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         }
-
                         Spacer(modifier = Modifier.height(10.dp))
-
                         Button(
                             onClick = onCheckoutClick,
                             modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -284,7 +339,6 @@ fun ResidentDetailsScreen(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -312,7 +366,51 @@ fun ResidentDetailsScreen(
         )
     }
 
-    // Message Choice Dialog (MessageChoiceDialog lives in ResidentListScreen.kt, same package)
+    // Give Notice Dialog
+    if (showNoticeDialog) {
+        val noticeStay = activeStay
+        var noticeDate by remember { mutableStateOf(LocalDate.now().toString()) }
+        val noticeErr = DateRules.validateDate(
+            noticeDate, "Notice date", minDateIso = noticeStay?.joinDate, notFuture = false
+        )
+        AlertDialog(
+            onDismissRequest = { showNoticeDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = AppCard,
+            titleContentColor = AppText,
+            textContentColor = AppMuted,
+            title = { Text("Give notice of check-out", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Record the date ${person?.name ?: "this resident"} plans to leave. " +
+                                "They will appear in the Notice list until checked out."
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    AppDateField(
+                        label = "Planned check-out date *",
+                        value = noticeDate,
+                        onValueChange = { noticeDate = it },
+                        error = noticeErr
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = noticeErr == null,
+                    onClick = {
+                        viewModel.giveNotice(noticeDate)
+                        showNoticeDialog = false
+                    }
+                ) { Text("Save Notice", color = AppNavy, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoticeDialog = false }) { Text("Cancel", color = AppMuted) }
+            }
+        )
+    }
+
+    // Message Choice Dialog
     val dialogPerson = person
     val dialogStay = activeStay
     if (showMessageDialog && dialogPerson != null && dialogStay != null) {
@@ -457,7 +555,6 @@ private fun PaymentHistoryCard(payment: Payment, onDeleteClick: () -> Unit) {
                     Text(payment.note, style = MaterialTheme.typography.bodySmall, color = AppMuted)
                 }
             }
-
             Column(horizontalAlignment = Alignment.End) {
                 Text(payment.amountPaise.paiseToText(), style = MaterialTheme.typography.titleLarge, color = AppNavy, fontWeight = FontWeight.Bold)
                 IconButton(onClick = onDeleteClick) {

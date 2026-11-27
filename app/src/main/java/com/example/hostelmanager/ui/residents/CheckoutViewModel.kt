@@ -8,7 +8,7 @@ import com.example.hostelmanager.data.Stay
 import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.ResidentRepository
 import com.example.hostelmanager.data.repository.RoomRepository
-import com.example.hostelmanager.domain.BillingCycle
+import com.example.hostelmanager.domain.Balance
 import com.example.hostelmanager.util.paiseToText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 class CheckoutViewModel(
     private val residentRepository: ResidentRepository,
@@ -49,44 +48,6 @@ class CheckoutViewModel(
         _personId.value = id
     }
 
-    /** Money still owed for this stay as of [checkoutDate]. */
-    private suspend fun outstandingFor(stay: Stay, checkoutDate: String): Long {
-        return if (stay.dailyRent > 0) {
-            val days = runCatching {
-                ChronoUnit.DAYS.between(
-                    LocalDate.parse(stay.joinDate),
-                    LocalDate.parse(checkoutDate)
-                ) + 1
-            }.getOrDefault(1L).coerceAtLeast(1L)
-            val paid = paymentRepository.getTotalPaidForStayOnce(stay.id)
-            (days * stay.dailyRent) - paid
-        } else {
-            val anchor = stay.billingAnchorDay.coerceIn(1, 31)
-            val reference = runCatching { LocalDate.parse(checkoutDate) }
-                .getOrDefault(LocalDate.now())
-            val start = BillingCycle.cycleStart(reference, anchor)
-            val end = start.plusMonths(1).minusDays(1)
-            val paidInCycle = paymentRepository
-                .getPaymentsInCycle(stay.id, start.toString(), end.toString())
-                .sumOf { it.amountPaise }
-            stay.monthlyRent - paidInCycle
-        }
-    }
-
-    /** A ₹0 payment with a reason (>= 5 chars) inside the period = deliberate write-off. */
-    private suspend fun hasWriteOff(stay: Stay, checkoutDate: String): Boolean {
-        return if (stay.dailyRent > 0) {
-            paymentRepository.countWriteOffsInRange(stay.id, stay.joinDate, checkoutDate) > 0
-        } else {
-            val anchor = stay.billingAnchorDay.coerceIn(1, 31)
-            val reference = runCatching { LocalDate.parse(checkoutDate) }
-                .getOrDefault(LocalDate.now())
-            val start = BillingCycle.cycleStart(reference, anchor)
-            val end = start.plusMonths(1).minusDays(1)
-            paymentRepository.countWriteOffsInRange(stay.id, start.toString(), end.toString()) > 0
-        }
-    }
-
     suspend fun checkoutResident(
         checkoutDate: String,
         refundPaise: Long,
@@ -104,8 +65,7 @@ class CheckoutViewModel(
             return false
         }
         if (checkoutDate < stay.joinDate) {
-            _checkoutError.value =
-                "Check-out date cannot be before the join date (${stay.joinDate})."
+            _checkoutError.value = "Check-out date cannot be before the join date (${stay.joinDate})."
             return false
         }
         if (refundPaise < 0) {
@@ -113,8 +73,7 @@ class CheckoutViewModel(
             return false
         }
         if (refundPaise > stay.depositCollected) {
-            _checkoutError.value =
-                "Refund cannot be more than the deposit held (${stay.depositCollected.paiseToText()})."
+            _checkoutError.value = "Refund cannot be more than the deposit held (${stay.depositCollected.paiseToText()})."
             return false
         }
         if (refundPaise > 0 && (refundMode.isNullOrBlank() || refundDate.isNullOrBlank())) {
@@ -122,11 +81,14 @@ class CheckoutViewModel(
             return false
         }
 
-        // ✅ THE GATE — every checkout path (details screen, daily sheet) passes here.
-        val due = outstandingFor(stay, checkoutDate)
-        if (due > 0 && !hasWriteOff(stay, checkoutDate)) {
+        // ✅ THE UNIFIED GATE — uses the exact same Balance math as the rest of the app.
+        val payments = paymentRepository.getPaymentsForStayOnce(stay.id)
+        val refDate = runCatching { LocalDate.parse(checkoutDate) }.getOrDefault(LocalDate.now())
+        val balance = Balance.balancePaise(stay, payments, Balance.referenceDateFor(stay, refDate))
+
+        if (balance > 0) {
             _checkoutError.value =
-                "Payment pending: ${due.paiseToText()}. Record the payment, " +
+                "Payment pending: ${balance.paiseToText()}. Record the payment, " +
                         "or record a ₹0 payment with a reason to write it off."
             return false
         }
