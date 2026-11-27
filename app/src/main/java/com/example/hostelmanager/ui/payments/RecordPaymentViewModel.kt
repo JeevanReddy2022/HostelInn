@@ -6,23 +6,18 @@ import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.ResidentRepository
 import com.example.hostelmanager.ui.BaseHostelViewModel
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import java.time.LocalDate
 
 class RecordPaymentViewModel(
     private val residentRepository: ResidentRepository,
     private val paymentRepository: PaymentRepository
 ) : BaseHostelViewModel() {
 
-    val residents: StateFlow<List<ResidentWithRoom>> = hostelFlow(emptyList<ResidentWithRoom>()) { hostelId ->
-        residentRepository.getAllResidentsWithLatestStay(hostelId).map { allResidents ->
-            paymentRepository.getUnpaidResidentsForHostel(
-                hostelId = hostelId,
-                allResidents = allResidents,
-                today = LocalDate.now()
-            )
+    // All ACTIVE residents (monthly + daily), paid or not — so a second payment
+    // can always be recorded, and the Daily Guests sheet can prefill anyone.
+    val residents: StateFlow<List<ResidentWithRoom>> =
+        hostelFlow(emptyList<ResidentWithRoom>()) { hostelId ->
+            residentRepository.getActiveResidentsByHostel(hostelId)
         }
-    }
 
     suspend fun recordPayment(
         personId: String,
@@ -32,7 +27,11 @@ class RecordPaymentViewModel(
         recordedDate: String,
         note: String
     ): Boolean {
-        if (personId.isEmpty() || amountPaise <= 0 || paymentDate.isEmpty() || recordedDate.isEmpty()) return false
+        if (personId.isEmpty() || paymentDate.isEmpty() || recordedDate.isEmpty()) return false
+        if (amountPaise < 0) return false
+
+        // ✅ ₹0 is allowed ONLY as a deliberate write-off with a real reason.
+        if (amountPaise == 0L && note.trim().length < 5) return false
 
         val stay = residentRepository.getActiveStayForPerson(personId) ?: return false
 
@@ -45,7 +44,7 @@ class RecordPaymentViewModel(
                 mode = mode,
                 paymentDate = paymentDate,
                 date = recordedDate,
-                note = note
+                note = note.trim()
             )
         )
         return true

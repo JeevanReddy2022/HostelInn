@@ -27,33 +27,53 @@ import com.example.hostelmanager.ui.rooms.RoomViewModel
 
 object AppViewModelProvider {
     fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-        initializer { DashboardViewModel(container.hostelRepository, container.residentRepository, container.roomRepository, container.paymentRepository, container.expenseRepository) }
-        initializer { AddExpenseViewModel(container.expenseRepository) }
+        initializer {
+            DashboardViewModel(
+                hostelRepository = container.hostelRepository,
+                residentRepository = container.residentRepository,
+                roomRepository = container.roomRepository,
+                paymentRepository = container.paymentRepository,
+                expenseRepository = container.expenseRepository
+            )
+        }
+        initializer { AddExpenseViewModel(expenseRepository = container.expenseRepository) }
         initializer {
             val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
-            ExpensesViewModel(app, container.expenseRepository)
+            ExpensesViewModel(application = app, expenseRepository = container.expenseRepository)
         }
-        initializer { HostelViewModel(container.hostelRepository) }
-        initializer { PaymentHistoryViewModel(container.paymentRepository, container.residentRepository) }
-        initializer { PaymentsViewModel(container.paymentRepository, container.residentRepository) }
-        initializer { RecordPaymentViewModel(container.residentRepository, container.paymentRepository) }
-        initializer { ReportsViewModel(container.hostelRepository, container.roomRepository, container.residentRepository, container.paymentRepository, container.expenseRepository) }
-        initializer { CheckoutViewModel(container.residentRepository, container.roomRepository) }
+        initializer { HostelViewModel(hostelRepository = container.hostelRepository) }
+        initializer { PaymentHistoryViewModel(paymentRepository = container.paymentRepository, residentRepository = container.residentRepository) }
+        initializer { PaymentsViewModel(paymentRepository = container.paymentRepository, residentRepository = container.residentRepository) }
+        initializer { RecordPaymentViewModel(residentRepository = container.residentRepository, paymentRepository = container.paymentRepository) }
+        initializer {
+            ReportsViewModel(
+                hostelRepository = container.hostelRepository,
+                roomRepository = container.roomRepository,
+                residentRepository = container.residentRepository,
+                paymentRepository = container.paymentRepository,
+                expenseRepository = container.expenseRepository
+            )
+        }
+        initializer {
+            CheckoutViewModel(
+                residentRepository = container.residentRepository,
+                roomRepository = container.roomRepository,
+                paymentRepository = container.paymentRepository
+            )
+        }
         initializer {
             val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
-            EditResidentViewModel(app, container.residentRepository)
+            EditResidentViewModel(application = app, residentRepository = container.residentRepository)
         }
-        initializer { PastResidentsViewModel(container.residentRepository) }
-        initializer { ReAdmitResidentViewModel(container.residentRepository, container.roomRepository) }
-        initializer { ResidentDetailsViewModel(container.residentRepository, container.roomRepository, container.paymentRepository) }
-        initializer { ResidentListViewModel(container.residentRepository) }
-        initializer { ResidentViewModel(container.residentRepository, container.roomRepository) }
-        initializer { TransferRoomViewModel(container.residentRepository, container.roomRepository) }
-        initializer { ArchivedRoomsViewModel(container.roomRepository) }
-        initializer { RoomDetailsViewModel(container.roomRepository, container.residentRepository) }
-        initializer { RoomViewModel(container.roomRepository) }
-
-        // ✅ UPDATED: Pass paymentRepository to DailyGuestsViewModel
-        initializer { DailyGuestsViewModel(container.residentRepository, container.paymentRepository) }
+        initializer { PastResidentsViewModel(residentRepository = container.residentRepository) }
+        initializer { ReAdmitResidentViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository) }
+        initializer { ResidentDetailsViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository, paymentRepository = container.paymentRepository) }
+        initializer { ResidentListViewModel(residentRepository = container.residentRepository) }
+        initializer { ResidentViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository) }
+        initializer { TransferRoomViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository) }
+        initializer { ArchivedRoomsViewModel(roomRepository = container.roomRepository) }
+        initializer { RoomDetailsViewModel(roomRepository = container.roomRepository, residentRepository = container.residentRepository) }
+        initializer { RoomViewModel(roomRepository = container.roomRepository) }
+        initializer { DailyGuestsViewModel(residentRepository = container.residentRepository, paymentRepository = container.paymentRepository) }
     }
 }

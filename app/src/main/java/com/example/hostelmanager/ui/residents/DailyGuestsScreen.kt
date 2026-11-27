@@ -1,6 +1,6 @@
-
 package com.example.hostelmanager.ui.residents
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -65,10 +65,9 @@ import com.example.hostelmanager.ui.theme.AppGreen
 import com.example.hostelmanager.ui.theme.AppMuted
 import com.example.hostelmanager.ui.theme.AppNavy
 import com.example.hostelmanager.ui.theme.AppOnNavy
-import com.example.hostelmanager.ui.theme.AppRed
+import com.example.hostelmanager.ui.theme.AppOrange
 import com.example.hostelmanager.ui.theme.AppSoftBlue
-import com.example.hostelmanager.ui.theme.AppSoftGreen
-import com.example.hostelmanager.ui.theme.AppSoftRed
+import com.example.hostelmanager.ui.theme.AppSoftOrange
 import com.example.hostelmanager.ui.theme.AppText
 import com.example.hostelmanager.util.paiseToText
 import java.time.LocalDate
@@ -93,18 +92,27 @@ fun DailyGuestsScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     var currentGuest by remember { mutableStateOf<ResidentWithRoom?>(null) }
 
-    // ✅ NEW: Track total paid for the current guest
     var totalPaid by remember { mutableStateOf(0L) }
+    var isWrittenOff by remember { mutableStateOf(false) }
 
-    // Fetch total paid when guest is selected
-    LaunchedEffect(currentGuest) {
-        currentGuest?.let { guest ->
-            if (guest.stayId.isNotEmpty()) {
-                viewModel.getTotalPaid(guest.stayId).collect { paid ->
-                    totalPaid = paid
-                }
-            }
+    // Live money total while the sheet is open
+    LaunchedEffect(currentGuest?.stayId) {
+        val stayId = currentGuest?.stayId
+        if (!stayId.isNullOrEmpty()) {
+            viewModel.getTotalPaid(stayId).collect { totalPaid = it }
         }
+    }
+
+    // ✅ Re-check the write-off flag every time the sheet opens
+    LaunchedEffect(showBottomSheet, currentGuest?.stayId) {
+        if (!showBottomSheet) return@LaunchedEffect
+        val guest = currentGuest ?: return@LaunchedEffect
+        if (guest.stayId.isEmpty()) return@LaunchedEffect
+        isWrittenOff = viewModel.hasWriteOff(
+            guest.stayId,
+            guest.joinDate,
+            LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        )
     }
 
     Scaffold(
@@ -117,19 +125,35 @@ fun DailyGuestsScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppText)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBackground, titleContentColor = AppText, navigationIconContentColor = AppText)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = AppBackground,
+                    titleContentColor = AppText,
+                    navigationIconContentColor = AppText
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddDailyGuestClick, shape = RoundedCornerShape(18.dp), containerColor = AppNavy, contentColor = AppOnNavy, elevation = FloatingActionButtonDefaults.elevation(6.dp)) {
+            FloatingActionButton(
+                onClick = onAddDailyGuestClick,
+                shape = RoundedCornerShape(18.dp),
+                containerColor = AppNavy,
+                contentColor = AppOnNavy,
+                elevation = FloatingActionButtonDefaults.elevation(6.dp)
+            ) {
                 Icon(Icons.Default.PersonAdd, contentDescription = "Add Daily Guest")
             }
         }
     ) { padding ->
         if (guests.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.size(80.dp).clip(CircleShape).background(AppSoftBlue), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.size(80.dp).clip(CircleShape).background(AppSoftBlue),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(Icons.Default.Hotel, contentDescription = null, tint = AppNavy, modifier = Modifier.size(40.dp))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -139,28 +163,47 @@ fun DailyGuestsScreen(
                 }
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 items(guests, key = { it.person.id }) { guest ->
-                    DailyGuestCard(guest = guest, onClick = { currentGuest = guest; showBottomSheet = true })
+                    DailyGuestCard(
+                        guest = guest,
+                        onClick = {
+                            currentGuest = guest
+                            showBottomSheet = true
+                        }
+                    )
                 }
             }
         }
     }
 
-    // The Bottom Sheet
     if (showBottomSheet && currentGuest != null) {
         val guest = currentGuest!!
+        val today = LocalDate.now()
         val daysStayed = try {
-            val join = LocalDate.parse(guest.joinDate, DateTimeFormatter.ISO_LOCAL_DATE)
-            ChronoUnit.DAYS.between(join, LocalDate.now()) + 1
-        } catch (e: Exception) { 1 }
+            ChronoUnit.DAYS.between(
+                LocalDate.parse(guest.joinDate, DateTimeFormatter.ISO_LOCAL_DATE),
+                today
+            ) + 1
+        } catch (e: Exception) { 1L }.coerceAtLeast(1L)
 
         val totalDuePaise = daysStayed * guest.dailyRent
         val balanceDue = totalDuePaise - totalPaid
-        val isFullyPaid = balanceDue <= 0
 
-        ModalBottomSheet(onDismissRequest = { showBottomSheet = false }, sheetState = sheetState) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // ✅ SAME RULE AS THE CHECKOUT GATE: paid in full OR written off
+        val isSettled = balanceDue <= 0 || isWrittenOff
+
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(AppBorder))
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -168,8 +211,11 @@ fun DailyGuestsScreen(
                 Text("Room ${guest.roomNumber}", style = MaterialTheme.typography.bodyMedium, color = AppMuted)
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Math Card
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = AppSoftBlue)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = AppSoftBlue)
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Daily Rate", color = AppNavy, fontWeight = FontWeight.Medium)
@@ -192,41 +238,75 @@ fun DailyGuestsScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Balance Due", color = if (isFullyPaid) AppGreen else AppRed, fontWeight = FontWeight.Bold)
-                            Text(balanceDue.paiseToText(), color = if (isFullyPaid) AppGreen else AppRed, fontWeight = FontWeight.Bold)
+                            Text("Balance Due", color = if (balanceDue <= 0) AppGreen else AppOrange, fontWeight = FontWeight.Bold)
+                            Text(balanceDue.paiseToText(), color = if (balanceDue <= 0) AppGreen else AppOrange, fontWeight = FontWeight.Bold)
+                        }
+                        if (isWrittenOff && balanceDue > 0) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Write-off", color = AppOrange, fontWeight = FontWeight.Bold)
+                                Text("Recorded ✓", color = AppOrange, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Action Buttons
-                OutlinedButton(onClick = { showBottomSheet = false; onGuestClick(guest.person.id) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        showBottomSheet = false
+                        onGuestClick(guest.person.id)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
                     Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("View Full Details", fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Button(onClick = { showBottomSheet = false; onRecordPaymentClick(guest.person.id, totalDuePaise) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = AppNavy, contentColor = AppOnNavy)) {
+                Button(
+                    onClick = {
+                        showBottomSheet = false
+                        onRecordPaymentClick(guest.person.id, balanceDue.coerceAtLeast(0L))
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppNavy, contentColor = AppOnNavy)
+                ) {
                     Icon(Icons.Default.Payments, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Record Payment (${totalDuePaise.paiseToText()})", fontWeight = FontWeight.Bold)
+                    Text(
+                        if (balanceDue > 0) "Record Payment (${balanceDue.paiseToText()})"
+                        else "Record Extra Payment",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ✅ Check Out Button - Grayed out if balance > 0
                 OutlinedButton(
-                    onClick = { showBottomSheet = false; onCheckoutClick(guest.person.id) },
+                    onClick = {
+                        showBottomSheet = false
+                        onCheckoutClick(guest.person.id)
+                    },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
-                    enabled = isFullyPaid, // ✅ Disabled if not fully paid
+                    enabled = isSettled,
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFFE11D48),
                         disabledContentColor = AppMuted
                     )
                 ) {
-                    Text(if (isFullyPaid) "Check Out & Settle" else "Settle Balance First", fontWeight = FontWeight.Bold)
+                    Text(
+                        when {
+                            isSettled && isWrittenOff && balanceDue > 0 -> "Check Out (Written Off)"
+                            isSettled -> "Check Out & Settle"
+                            else -> "Settle Balance First"
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -236,8 +316,17 @@ fun DailyGuestsScreen(
 
 @Composable
 private fun DailyGuestCard(guest: ResidentWithRoom, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = AppCard), border = androidx.compose.foundation.BorderStroke(1.dp, AppBorder), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
+        border = BorderStroke(1.dp, AppBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             ResidentAvatar(photoPath = guest.person.profilePhotoPath)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -250,8 +339,8 @@ private fun DailyGuestCard(guest: ResidentWithRoom, onClick: () -> Unit) {
                         Text("Room ${guest.roomNumber}", fontSize = 11.sp, color = AppNavy, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.clip(RoundedCornerShape(50)).background(AppSoftBlue.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text("${guest.dailyRent.paiseToText()}/day", fontSize = 11.sp, color = AppNavy, fontWeight = FontWeight.Bold)
+                    Box(modifier = Modifier.clip(RoundedCornerShape(50)).background(AppSoftOrange).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                        Text("${guest.dailyRent.paiseToText()}/day", fontSize = 11.sp, color = AppOrange, fontWeight = FontWeight.Bold)
                     }
                 }
             }

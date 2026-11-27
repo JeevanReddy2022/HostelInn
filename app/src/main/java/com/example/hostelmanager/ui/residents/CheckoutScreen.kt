@@ -3,7 +3,6 @@ package com.example.hostelmanager.ui.residents
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,11 +11,10 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -31,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -48,6 +47,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hostelmanager.di.appViewModel
@@ -92,13 +92,16 @@ fun CheckoutScreen(
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val today = remember { LocalDate.now().toString() }
 
+    val today = remember { LocalDate.now().toString() }
     var checkoutDate by remember { mutableStateOf(today) }
     var refundRupees by remember { mutableStateOf("") }
     var selectedRefundMode by remember { mutableStateOf("Cash") }
     var refundModeExpanded by remember { mutableStateOf(false) }
     var refundDate by remember { mutableStateOf(today) }
+
+    // ✅ NEW: confirmation dialog state
+    var showConfirmDialog by remember { mutableStateOf(false) }
 
     val depositPaise = activeStay?.depositCollected ?: 0L
     val depositRupees = depositPaise.paiseToRupees()
@@ -152,8 +155,13 @@ fun CheckoutScreen(
                     Text("Current Stay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppNavy)
                     Spacer(Modifier.height(10.dp))
                     DetailRow("Room", currentRoom?.roomNumber ?: "—")
-                    val checkoutRentLabel = if ((activeStay?.dailyRent ?: 0L) > 0) "${activeStay!!.dailyRent.paiseToText()}/day" else (activeStay?.monthlyRent ?: 0L).paiseToText()
-                    DetailRow("Rent", checkoutRentLabel)
+                    val stay = activeStay
+                    val rentLabel = if (stay != null && stay.dailyRent > 0) {
+                        "${stay.dailyRent.paiseToText()}/day"
+                    } else {
+                        (stay?.monthlyRent ?: 0L).paiseToText()
+                    }
+                    DetailRow("Rent", rentLabel)
                     DetailRow("Joined", activeStay?.joinDate ?: "—")
                     DetailRow("Deposit held", depositPaise.paiseToText())
                 }
@@ -181,12 +189,10 @@ fun CheckoutScreen(
             )
 
             val wantsRefund = (refundRupees.toLongOrNull() ?: 0L) > 0
-
             if (wantsRefund) {
                 ExposedDropdownMenuBox(
                     expanded = refundModeExpanded,
-                    onExpandedChange = { refundModeExpanded = !refundModeExpanded },
-                    modifier = Modifier.fillMaxWidth()
+                    onExpandedChange = { refundModeExpanded = !refundModeExpanded }
                 ) {
                     OutlinedTextField(
                         value = selectedRefundMode,
@@ -196,7 +202,7 @@ fun CheckoutScreen(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = refundModeExpanded) },
                         modifier = Modifier.fillMaxWidth().menuAnchor(),
                         singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = appTextFieldColors()
                     )
                     ExposedDropdownMenu(
@@ -214,7 +220,6 @@ fun CheckoutScreen(
                         }
                     }
                 }
-
                 AppDateField(
                     label = "Refund Date (YYYY-MM-DD) *",
                     value = refundDate,
@@ -224,26 +229,14 @@ fun CheckoutScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-
             Button(
                 onClick = {
                     keyboardController?.hide()
                     focusManager.clearFocus()
-                    val refundPaise = refundRupees.rupeesToPaise()
-                    scope.launch {
-                        val ok = viewModel.checkoutResident(
-                            checkoutDate = checkoutDate,
-                            refundPaise = refundPaise,
-                            refundMode = if (refundPaise > 0) selectedRefundMode else null,
-                            refundDate = if (refundPaise > 0) refundDate else null
-                        )
-                        if (ok) onCheckoutComplete()
-                    }
+                    showConfirmDialog = true   // ✅ Ask first
                 },
                 enabled = isFormValid,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AppNavy,
@@ -255,6 +248,54 @@ fun CheckoutScreen(
                 Text("Confirm Check-out", fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    // ✅ NEW: Confirmation dialog
+    if (showConfirmDialog) {
+        val refundPaise = refundRupees.rupeesToPaise()
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = AppCard,
+            titleContentColor = AppText,
+            textContentColor = AppMuted,
+            title = { Text("Check out ${person?.name ?: "this resident"}?", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("This will end their stay and free up the bed.")
+                    DetailRow("Check-out date", checkoutDate)
+                    if (refundPaise > 0) {
+                        DetailRow("Deposit refund", "${refundPaise.paiseToText()} ($selectedRefundMode)")
+                    }
+                    Text(
+                        "You can re-admit them later from Checkouts.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppMuted
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmDialog = false
+                    scope.launch {
+                        val ok = viewModel.checkoutResident(
+                            checkoutDate = checkoutDate,
+                            refundPaise = refundPaise,
+                            refundMode = if (refundPaise > 0) selectedRefundMode else null,
+                            refundDate = if (refundPaise > 0) refundDate else null
+                        )
+                        if (ok) onCheckoutComplete()
+                    }
+                }) {
+                    Text("Yes, Check Out", color = AppRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancel", color = AppMuted)
+                }
+            }
+        )
     }
 }
 

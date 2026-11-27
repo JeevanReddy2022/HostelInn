@@ -11,16 +11,22 @@ import kotlinx.coroutines.flow.stateIn
 
 class DailyGuestsViewModel(
     private val residentRepository: ResidentRepository,
-    private val paymentRepository: PaymentRepository // ✅ Added
+    private val paymentRepository: PaymentRepository
 ) : BaseHostelViewModel() {
 
-    val dailyGuests: StateFlow<List<ResidentWithRoom>> = hostelFlow(emptyList<ResidentWithRoom>()) { id ->
-        residentRepository.getDailyGuestsByHostel(id)
-    }
+    val dailyGuests: StateFlow<List<ResidentWithRoom>> =
+        hostelFlow(emptyList<ResidentWithRoom>()) { id ->
+            residentRepository.getDailyGuestsByHostel(id)
+        }
 
-    // ✅ NEW: Fetch total paid for a specific stay
+    /** Live total paid on a stay (₹0 write-offs contribute 0 — that's correct). */
     fun getTotalPaid(stayId: String): StateFlow<Long> {
         return paymentRepository.getTotalPaidForStay(stayId)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+    }
+
+    /** ✅ NEW: same rule the checkout gate uses, so the sheet and the gate agree. */
+    suspend fun hasWriteOff(stayId: String, startDate: String, endDate: String): Boolean {
+        return paymentRepository.countWriteOffsInRange(stayId, startDate, endDate) > 0
     }
 }

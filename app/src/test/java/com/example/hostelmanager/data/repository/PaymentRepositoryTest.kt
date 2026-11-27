@@ -32,10 +32,18 @@ class FakePaymentDao : PaymentDao {
     override fun getTotalPaymentsBetween(hostelId: String, startDate: String, endDate: String): Flow<Long> = TODO()
     override fun getAllPaymentsWithDetailsForHostel(hostelId: String): Flow<List<PaymentWithDetails>> = TODO()
     override suspend fun getPaymentsInCycle(stayId: String, cycleStart: String, cycleEnd: String): List<Payment> = TODO()
-
+    override fun getTotalPaidForStay(stayId: String): Flow<Long> = TODO()
+    override suspend fun getTotalPaidForStayOnce(stayId: String): Long =
+        payments.filter { it.stayId == stayId }.sumOf { it.amountPaise }
     override suspend fun getAllPaymentsForHostelOnce(hostelId: String): List<Payment> {
         return payments.filter { it.hostelId == hostelId }
     }
+    override suspend fun countWriteOffsInRange(stayId: String, startDate: String, endDate: String): Int =
+        payments.count {
+            it.stayId == stayId && it.amountPaise == 0L &&
+                    it.note.trim().length >= 5 &&
+                    it.paymentDate >= startDate && it.paymentDate <= endDate
+        }
 }
 
 class PaymentRepositoryTest {

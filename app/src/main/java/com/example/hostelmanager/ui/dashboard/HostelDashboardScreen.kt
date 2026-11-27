@@ -17,9 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.R
 import com.example.hostelmanager.data.Hostel
 import com.example.hostelmanager.di.appViewModel
 import com.example.hostelmanager.ui.expenses.ExpensesListScreen
@@ -260,7 +262,7 @@ private fun DrawerContent(
 
         DrawerMenuItem(icon = Icons.Default.BarChart, title = "Reports", onClick = onReportsClick)
         DrawerMenuItem(icon = Icons.Default.Archive, title = "Archived Rooms", onClick = onArchivedRoomsClick)
-        DrawerMenuItem(icon = Icons.Default.People, title = "Past Residents", onClick = onPastResidentsClick)
+        DrawerMenuItem(painter = painterResource(R.drawable.ic_person_walking_luggage), title = "Checkouts", onClick = onPastResidentsClick)
 
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -268,11 +270,29 @@ private fun DrawerContent(
 
 @Composable
 private fun DrawerMenuItem(icon: ImageVector, title: String, onClick: () -> Unit) {
+    DrawerMenuItemInternal(
+        icon = { Icon(imageVector = icon, contentDescription = null, tint = AppNavy, modifier = Modifier.size(24.dp)) },
+        title = title,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun DrawerMenuItem(painter: androidx.compose.ui.graphics.painter.Painter, title: String, onClick: () -> Unit) {
+    DrawerMenuItemInternal(
+        icon = { Icon(painter = painter, contentDescription = null, tint = AppNavy, modifier = Modifier.size(24.dp)) },
+        title = title,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun DrawerMenuItemInternal(icon: @Composable () -> Unit, title: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = AppNavy, modifier = Modifier.size(24.dp))
+        icon()
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = title, style = MaterialTheme.typography.bodyLarge, color = AppText, fontWeight = FontWeight.Medium)
     }
