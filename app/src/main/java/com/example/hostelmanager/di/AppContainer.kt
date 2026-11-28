@@ -21,7 +21,7 @@ interface AppContainer {
     val residentRepository: ResidentRepository
     val paymentRepository: PaymentRepository
     val expenseRepository: ExpenseRepository
-    val paymentEditRepository: PaymentEditRepository
+    val paymentEditRepository: PaymentEditRepository // ✅ NEW
 }
 
 class AppContainerImpl(private val context: Context) : AppContainer {
@@ -65,6 +65,7 @@ class AppContainerImpl(private val context: Context) : AppContainer {
         )
     }
 
+    // ✅ NEW: Wires up the audit trail repository
     override val paymentEditRepository: PaymentEditRepository by lazy {
         PaymentEditRepositoryImpl(
             database = database,

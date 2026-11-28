@@ -111,7 +111,12 @@ fun NoticeScreen(
                         modifier = Modifier.size(80.dp).clip(CircleShape).background(AppSoftBlue),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = AppNavy, modifier = Modifier.size(40.dp))
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = AppNavy,
+                            modifier = Modifier.size(40.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -122,7 +127,7 @@ fun NoticeScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "When a resident tells you their planned check-out date, record it from their details screen.",
+                        "Record a planned check-out date from a resident's details screen.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = AppMuted
                     )
@@ -222,7 +227,10 @@ private fun NoticeCard(
             Spacer(modifier = Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(AppSoftBlue).padding(horizontal = 10.dp, vertical = 4.dp)
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(AppSoftBlue)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         "Leaves ${noticeDate?.let { formatDisplayDate(it.toString()) } ?: "—"}",
@@ -230,7 +238,10 @@ private fun NoticeCard(
                     )
                 }
                 Box(
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(statusSoft).padding(horizontal = 10.dp, vertical = 4.dp)
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(statusSoft)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(statusLabel, fontSize = 11.sp, color = statusColor, fontWeight = FontWeight.Bold)
                 }

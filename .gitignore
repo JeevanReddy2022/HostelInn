@@ -11,3 +11,4 @@ replay_pid*.log
 .DS_Store
 *.apk
 *.aar
+*.jks

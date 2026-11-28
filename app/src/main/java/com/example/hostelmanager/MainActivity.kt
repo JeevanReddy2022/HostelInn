@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -14,7 +13,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.hostelmanager.di.LocalAppContainer
 import com.example.hostelmanager.ui.about.AboutScreen
 import com.example.hostelmanager.ui.dashboard.HostelDashboardScreen
 import com.example.hostelmanager.ui.expenses.AddExpenseScreen
@@ -26,6 +24,7 @@ import com.example.hostelmanager.ui.residents.AddResidentScreen
 import com.example.hostelmanager.ui.residents.CheckoutScreen
 import com.example.hostelmanager.ui.residents.DailyGuestsScreen
 import com.example.hostelmanager.ui.residents.EditResidentScreen
+import com.example.hostelmanager.ui.residents.NoticeScreen
 import com.example.hostelmanager.ui.residents.PastResidentsScreen
 import com.example.hostelmanager.ui.residents.ReAdmitResidentScreen
 import com.example.hostelmanager.ui.residents.ResidentDetailsScreen
@@ -51,7 +50,6 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(navController = navController, startDestination = initialDestination) {
 
-                    // ✅ NEW: About page
                     composable("about") {
                         AboutScreen(onBackClick = { navController.popBackStack() })
                     }
@@ -84,7 +82,8 @@ class MainActivity : ComponentActivity() {
                             onAddExpenseClick = { navController.navigate("add_expense/$currentHostelId") },
                             onReportsClick = { navController.navigate("reports/$currentHostelId") },
                             onDailyGuestsClick = { navController.navigate("daily_guests/$currentHostelId") },
-                            onAboutClick = { navController.navigate("about") }, // ✅ NEW
+                            onNoticeClick = { navController.navigate("notice/$currentHostelId") },
+                            onAboutClick = { navController.navigate("about") },
                             onHostelSwitch = { newHostelId ->
                                 if (newHostelId != currentHostelId) {
                                     currentHostelId = newHostelId
@@ -114,6 +113,19 @@ class MainActivity : ComponentActivity() {
                             onRecordPaymentClick = { personId, amountPaise ->
                                 navController.navigate("record_payment/$hostelId/$personId?amount=$amountPaise")
                             },
+                            onCheckoutClick = { personId -> navController.navigate("checkout/$personId") }
+                        )
+                    }
+
+                    composable(
+                        route = "notice/{hostelId}",
+                        arguments = listOf(navArgument("hostelId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val hostelId = backStackEntry.arguments?.getString("hostelId") ?: ""
+                        NoticeScreen(
+                            hostelId = hostelId,
+                            onBackClick = { navController.popBackStack() },
+                            onResidentClick = { personId -> navController.navigate("resident_details/$personId") },
                             onCheckoutClick = { personId -> navController.navigate("checkout/$personId") }
                         )
                     }

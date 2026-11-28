@@ -47,12 +47,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.hostelmanager.di.appViewModel
-import com.example.hostelmanager.ui.components.DetailRow
-import com.example.hostelmanager.ui.components.SectionHeader
-import com.example.hostelmanager.util.paiseToRupees
-import com.example.hostelmanager.util.paiseToText
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,10 +55,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hostelmanager.di.appViewModel
+import com.example.hostelmanager.ui.components.DetailRow
+import com.example.hostelmanager.ui.components.SectionHeader
+import com.example.hostelmanager.util.paiseToRupees
+import com.example.hostelmanager.util.paiseToText
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.hostelmanager.data.Payment
-import com.example.hostelmanager.domain.validation.DateRules
-import com.example.hostelmanager.ui.components.AppDateField
 import com.example.hostelmanager.ui.theme.AppBackground
 import com.example.hostelmanager.ui.theme.AppBorder
 import com.example.hostelmanager.ui.theme.AppCard
@@ -75,6 +75,7 @@ import com.example.hostelmanager.ui.theme.AppOrange
 import com.example.hostelmanager.ui.theme.AppRed
 import com.example.hostelmanager.ui.theme.AppSoftBlue
 import com.example.hostelmanager.ui.theme.AppSoftGreen
+import com.example.hostelmanager.ui.theme.AppSoftOrange
 import com.example.hostelmanager.ui.theme.AppSoftRed
 import com.example.hostelmanager.ui.theme.AppText
 import java.io.File
@@ -96,17 +97,18 @@ fun ResidentDetailsScreen(
     LaunchedEffect(personId) {
         viewModel.setPersonId(personId)
     }
+
     val person by viewModel.person.collectAsStateWithLifecycle()
     val activeStay by viewModel.activeStay.collectAsStateWithLifecycle()
     val room by viewModel.room.collectAsStateWithLifecycle()
     val payments by viewModel.payments.collectAsStateWithLifecycle()
-    val balance by viewModel.balance.collectAsStateWithLifecycle() // ✅ NEW
     val context = LocalContext.current
 
     var showEditConfirmDialog by remember { mutableStateOf(false) }
     var showMessageDialog by remember { mutableStateOf(false) }
     var paymentToDelete by remember { mutableStateOf<Payment?>(null) }
     var showNoticeDialog by remember { mutableStateOf(false) }
+    var showCancelNoticeDialog by remember { mutableStateOf(false) } // ✅ NEW
 
     Scaffold(
         containerColor = AppBackground,
@@ -176,7 +178,7 @@ fun ResidentDetailsScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         AsyncImage(
-                            model = coil.request.ImageRequest.Builder(LocalContext.current)
+                            model = ImageRequest.Builder(LocalContext.current)
                                 .data(File(currentPerson.profilePhotoPath))
                                 .crossfade(true)
                                 .build(),
@@ -235,30 +237,7 @@ fun ResidentDetailsScreen(
                         DetailRow("Join Date", stay.joinDate, weighted = true)
                         DetailRow("Deposit", stay.depositCollected.paiseToText(), weighted = true)
 
-                        // ✅ Live balance row
-                        val (balLabel, balColor) = when {
-                            balance > 0 -> "Balance Due" to AppRed
-                            balance < 0 -> "Credit" to AppGreen
-                            else -> "Status" to AppMuted
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(balLabel, style = MaterialTheme.typography.bodyMedium, color = AppMuted, modifier = Modifier.weight(0.4f))
-                            Text(
-                                if (balance == 0L) "Fully Settled" else "${if (balance < 0) "-" else ""}${kotlin.math.abs(balance).paiseToText()}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = balColor,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(0.6f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Notice block
+                        // ✅ Notice block
                         if (stay.noticeDate.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedButton(
@@ -274,7 +253,7 @@ fun ResidentDetailsScreen(
                                 Text("Give Notice (planned check-out)", fontWeight = FontWeight.Bold)
                             }
                         } else {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -284,9 +263,10 @@ fun ResidentDetailsScreen(
                                     "Notice given: leaves ${stay.noticeDate}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = AppOrange,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                TextButton(onClick = { viewModel.cancelNotice() }) {
+                                TextButton(onClick = { showCancelNoticeDialog = true }) { // ✅ CHANGED
                                     Text("Cancel", color = AppMuted)
                                 }
                             }
@@ -366,11 +346,11 @@ fun ResidentDetailsScreen(
         )
     }
 
-    // Give Notice Dialog
+    // ✅ Give Notice dialog
     if (showNoticeDialog) {
         val noticeStay = activeStay
         var noticeDate by remember { mutableStateOf(LocalDate.now().toString()) }
-        val noticeErr = DateRules.validateDate(
+        val noticeErr = com.example.hostelmanager.domain.validation.DateRules.validateDate(
             noticeDate, "Notice date", minDateIso = noticeStay?.joinDate, notFuture = false
         )
         AlertDialog(
@@ -387,7 +367,7 @@ fun ResidentDetailsScreen(
                                 "They will appear in the Notice list until checked out."
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    AppDateField(
+                    com.example.hostelmanager.ui.components.AppDateField(
                         label = "Planned check-out date *",
                         value = noticeDate,
                         onValueChange = { noticeDate = it },
@@ -410,7 +390,38 @@ fun ResidentDetailsScreen(
         )
     }
 
-    // Message Choice Dialog
+    // ✅ NEW: Cancel Notice Confirmation Dialog
+    if (showCancelNoticeDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelNoticeDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = AppCard,
+            titleContentColor = AppText,
+            textContentColor = AppMuted,
+            title = { Text("Cancel Notice?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Are you sure you want to cancel the notice for ${person?.name ?: "this resident"}? " +
+                            "They will no longer be marked for check-out."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.cancelNotice()
+                    showCancelNoticeDialog = false
+                }) {
+                    Text("Yes, Cancel Notice", color = AppOrange, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelNoticeDialog = false }) {
+                    Text("No", color = AppMuted)
+                }
+            }
+        )
+    }
+
+    // Message Choice Dialog (MessageChoiceDialog lives in ResidentListScreen.kt, same package)
     val dialogPerson = person
     val dialogStay = activeStay
     if (showMessageDialog && dialogPerson != null && dialogStay != null) {
@@ -511,7 +522,7 @@ private fun DocumentImage(label: String, path: String?) {
                 }
             } else {
                 AsyncImage(
-                    model = coil.request.ImageRequest.Builder(LocalContext.current)
+                    model = ImageRequest.Builder(LocalContext.current)
                         .data(File(path))
                         .crossfade(true)
                         .build(),

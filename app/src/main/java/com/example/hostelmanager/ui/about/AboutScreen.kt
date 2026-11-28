@@ -130,7 +130,7 @@ fun AboutScreen(
         Version $versionName
         Package ${context.packageName}
         Android ${Build.VERSION.RELEASE} · ${Build.MODEL}
-        Created by Adam
+        Created by Jeevan Reddy 
         """.trimIndent()
     }
 
@@ -222,9 +222,9 @@ fun AboutScreen(
 
                     AuthorCard(
                         initial = "A",
-                        name = "Adam",
+                        name = "Jeevan Reddy A",
                         role = "Creator & Product Owner",
-                        bio = "Runs the hostel and shaped every rule in this app — billing cycles, " +
+                        bio = "Runs the hostel and shaped every rule in this app, billing cycles, " +
                                 "notice periods, daily guests and write-offs all come from real desk " +
                                 "experience. Designed the workflows, decided what the app should do, " +
                                 "and tested every screen against real data.",
@@ -367,7 +367,7 @@ fun AboutScreen(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "© 2026 Adam · All rights reserved.",
+                        "© 2026 Jeevan Reddy A · All rights reserved.",
                         style = MaterialTheme.typography.bodySmall,
                         color = AppMuted
                     )

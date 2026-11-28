@@ -9,16 +9,13 @@ import com.example.hostelmanager.data.Stay
 import com.example.hostelmanager.data.repository.PaymentRepository
 import com.example.hostelmanager.data.repository.ResidentRepository
 import com.example.hostelmanager.data.repository.RoomRepository
-import com.example.hostelmanager.domain.Balance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 class ResidentDetailsViewModel(
     private val residentRepository: ResidentRepository,
@@ -43,12 +40,6 @@ class ResidentDetailsViewModel(
         if (id.isEmpty()) flowOf(emptyList())
         else paymentRepository.getPaymentsForPerson(id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    // ✅ NEW: Live ledger balance for the details screen
-    val balance: StateFlow<Long> = combine(activeStay, payments) { stay, paymentsList ->
-        if (stay == null) 0L
-        else Balance.balancePaise(stay, paymentsList, Balance.referenceDateFor(stay, LocalDate.now()))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
     fun setPersonId(id: String) {
         _personId.value = id

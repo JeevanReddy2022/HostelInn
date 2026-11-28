@@ -51,7 +51,8 @@ fun HostelDashboardScreen(
     onAddExpenseClick: () -> Unit,
     onReportsClick: () -> Unit,
     onDailyGuestsClick: () -> Unit,
-    onAboutClick: () -> Unit, // ✅ NEW
+    onNoticeClick: () -> Unit,
+    onAboutClick: () -> Unit,
     onHostelSwitch: (String) -> Unit,
     onAllHostelsClick: () -> Unit,
     hostelViewModel: HostelViewModel = appViewModel()
@@ -100,7 +101,11 @@ fun HostelDashboardScreen(
                         scope.launch { drawerState.close() }
                         onDailyGuestsClick()
                     },
-                    onAboutClick = { // ✅ NEW
+                    onNoticeClick = {
+                        scope.launch { drawerState.close() }
+                        onNoticeClick()
+                    },
+                    onAboutClick = {
                         scope.launch { drawerState.close() }
                         onAboutClick()
                     },
@@ -231,7 +236,8 @@ private fun DrawerContent(
     onPastResidentsClick: () -> Unit,
     onReportsClick: () -> Unit,
     onDailyGuestsClick: () -> Unit,
-    onAboutClick: () -> Unit, // ✅ NEW
+    onNoticeClick: () -> Unit,
+    onAboutClick: () -> Unit,
     onAllHostelsClick: () -> Unit
 ) {
     Column(
@@ -283,6 +289,7 @@ private fun DrawerContent(
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
         DrawerMenuItem(icon = Icons.Default.Hotel, title = "Daily Guests", onClick = onDailyGuestsClick)
+        DrawerMenuItem(icon = Icons.Default.Notifications, title = "Notice", onClick = onNoticeClick)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
@@ -304,7 +311,6 @@ private fun DrawerContent(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
 
-        // ✅ NEW: About
         DrawerMenuItem(icon = Icons.Default.Info, title = "About HostelInn", onClick = onAboutClick)
 
         Spacer(modifier = Modifier.height(16.dp))

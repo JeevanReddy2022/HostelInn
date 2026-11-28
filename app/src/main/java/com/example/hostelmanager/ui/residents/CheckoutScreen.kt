@@ -100,7 +100,6 @@ fun CheckoutScreen(
     var refundModeExpanded by remember { mutableStateOf(false) }
     var refundDate by remember { mutableStateOf(today) }
 
-    // ✅ NEW: confirmation dialog state
     var showConfirmDialog by remember { mutableStateOf(false) }
 
     val depositPaise = activeStay?.depositCollected ?: 0L
@@ -174,7 +173,10 @@ fun CheckoutScreen(
             AppDateField(
                 label = "Check-out Date (YYYY-MM-DD) *",
                 value = checkoutDate,
-                onValueChange = { checkoutDate = it },
+                onValueChange = {
+                    checkoutDate = it
+                    viewModel.setCheckoutError(null) // ✅ Clear error when date changes
+                },
                 error = checkoutDateError
             )
 
@@ -233,7 +235,16 @@ fun CheckoutScreen(
                 onClick = {
                     keyboardController?.hide()
                     focusManager.clearFocus()
-                    showConfirmDialog = true   // ✅ Ask first
+                    // ✅ Validate payment status FIRST
+                    scope.launch {
+                        val validationError = viewModel.validateCheckout(checkoutDate)
+                        if (validationError != null) {
+                            viewModel.setCheckoutError(validationError)
+                        } else {
+                            viewModel.setCheckoutError(null)
+                            showConfirmDialog = true   // Only show dialog if no pending payments
+                        }
+                    }
                 },
                 enabled = isFormValid,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -250,7 +261,6 @@ fun CheckoutScreen(
         }
     }
 
-    // ✅ NEW: Confirmation dialog
     if (showConfirmDialog) {
         val refundPaise = refundRupees.rupeesToPaise()
         AlertDialog(

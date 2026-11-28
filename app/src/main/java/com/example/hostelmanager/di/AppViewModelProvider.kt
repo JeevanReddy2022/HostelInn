@@ -25,7 +25,6 @@ import com.example.hostelmanager.ui.residents.TransferRoomViewModel
 import com.example.hostelmanager.ui.rooms.ArchivedRoomsViewModel
 import com.example.hostelmanager.ui.rooms.RoomDetailsViewModel
 import com.example.hostelmanager.ui.rooms.RoomViewModel
-import com.example.hostelmanager.data.repository.PaymentEditRepository
 
 object AppViewModelProvider {
     fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
@@ -44,9 +43,25 @@ object AppViewModelProvider {
             ExpensesViewModel(application = app, expenseRepository = container.expenseRepository)
         }
         initializer { HostelViewModel(hostelRepository = container.hostelRepository) }
-        initializer { PaymentHistoryViewModel(paymentRepository = container.paymentRepository, residentRepository = container.residentRepository, paymentEditRepository = container.paymentEditRepository) }
-        initializer { PaymentsViewModel(paymentRepository = container.paymentRepository, residentRepository = container.residentRepository) }
-        initializer { RecordPaymentViewModel(residentRepository = container.residentRepository, paymentRepository = container.paymentRepository) }
+        initializer {
+            PaymentHistoryViewModel(
+                paymentRepository = container.paymentRepository,
+                residentRepository = container.residentRepository,
+                paymentEditRepository = container.paymentEditRepository
+            )
+        }
+        initializer {
+            PaymentsViewModel(
+                paymentRepository = container.paymentRepository,
+                residentRepository = container.residentRepository
+            )
+        }
+        initializer {
+            RecordPaymentViewModel(
+                residentRepository = container.residentRepository,
+                paymentRepository = container.paymentRepository
+            )
+        }
         initializer {
             ReportsViewModel(
                 hostelRepository = container.hostelRepository,
@@ -68,15 +83,46 @@ object AppViewModelProvider {
             EditResidentViewModel(application = app, residentRepository = container.residentRepository)
         }
         initializer { PastResidentsViewModel(residentRepository = container.residentRepository) }
-        initializer { ReAdmitResidentViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository) }
-        initializer { ResidentDetailsViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository, paymentRepository = container.paymentRepository) }
+        initializer {
+            ReAdmitResidentViewModel(
+                residentRepository = container.residentRepository,
+                roomRepository = container.roomRepository
+            )
+        }
+        initializer {
+            ResidentDetailsViewModel(
+                residentRepository = container.residentRepository,
+                roomRepository = container.roomRepository,
+                paymentRepository = container.paymentRepository
+            )
+        }
         initializer { ResidentListViewModel(residentRepository = container.residentRepository) }
-        initializer { ResidentViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository) }
-        initializer { TransferRoomViewModel(residentRepository = container.residentRepository, roomRepository = container.roomRepository) }
+        initializer {
+            ResidentViewModel(
+                residentRepository = container.residentRepository,
+                roomRepository = container.roomRepository
+            )
+        }
+        initializer {
+            TransferRoomViewModel(
+                residentRepository = container.residentRepository,
+                roomRepository = container.roomRepository
+            )
+        }
         initializer { ArchivedRoomsViewModel(roomRepository = container.roomRepository) }
-        initializer { RoomDetailsViewModel(roomRepository = container.roomRepository, residentRepository = container.residentRepository) }
+        initializer {
+            RoomDetailsViewModel(
+                roomRepository = container.roomRepository,
+                residentRepository = container.residentRepository
+            )
+        }
         initializer { RoomViewModel(roomRepository = container.roomRepository) }
-        initializer { DailyGuestsViewModel(residentRepository = container.residentRepository, paymentRepository = container.paymentRepository) }
-        initializer { NoticeViewModel(residentRepository = container.residentRepository) } // ✅ NEW
+        initializer {
+            DailyGuestsViewModel(
+                residentRepository = container.residentRepository,
+                paymentRepository = container.paymentRepository
+            )
+        }
+        initializer { NoticeViewModel(residentRepository = container.residentRepository) }
     }
 }
